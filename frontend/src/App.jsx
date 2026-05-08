@@ -147,7 +147,7 @@ function App() {
 
   async function uploadDocument() {
     if (!uploadTitle.trim() || !uploadFile) {
-      setUploadMessage("Informe um título e selecione um arquivo .md ou .txt.");
+      setUploadMessage("Informe um título e selecione um arquivo .md, .txt ou .pdf.");
       return;
     }
 
@@ -207,7 +207,7 @@ function App() {
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              Envie arquivos .md ou .txt para indexar no motor de conhecimento.
+              Envie arquivos .md, .txt ou .pdf para indexar no motor de conhecimento.
             </p>
 
             <div className="mt-4 space-y-3">
@@ -220,7 +220,7 @@ function App() {
 
               <input
                 type="file"
-                accept=".md,.txt"
+                accept=".md,.txt,.pdf"
                 onChange={(event) => {
                   setUploadFile(event.target.files?.[0] || null);
                 }}

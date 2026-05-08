@@ -5,6 +5,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
 from app.services.document_ingestion_service import ingest_text_document
+from app.services.pdf_service import extract_text_from_pdf
 
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -51,10 +52,10 @@ async def upload_document(
             detail="Informe um título para o documento.",
         )
 
-    if not file.filename.endswith((".md", ".txt")):
+    if not file.filename.endswith((".md", ".txt", ".pdf")):
         raise HTTPException(
             status_code=400,
-            detail="Por enquanto, envie apenas arquivos .md ou .txt.",
+            detail="Por enquanto, envie apenas arquivos .md, .txt ou .pdf.",
         )
 
     supabase = get_supabase_client()
@@ -79,12 +80,24 @@ async def upload_document(
             )
 
     raw_content = await file.read()
-    content = raw_content.decode("utf-8")
+
+    if file.filename.endswith(".pdf"):
+        content = extract_text_from_pdf(raw_content)
+        source_type = "pdf"
+    else:
+        content = raw_content.decode("utf-8")
+        source_type = "upload"
+
+    if not content.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Não foi possível extrair texto desse arquivo.",
+        )
 
     result = ingest_text_document(
         title=clean_title,
         content=content,
-        source_type="upload",
+        source_type=source_type,
         source_url=f"uploaded://{file.filename}",
     )
 
@@ -92,6 +105,7 @@ async def upload_document(
         "message": "Documento indexado com sucesso.",
         "filename": file.filename,
         "title": clean_title,
+        "source_type": source_type,
         **result,
     }
 

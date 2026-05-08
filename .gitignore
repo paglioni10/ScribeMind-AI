@@ -3,18 +3,29 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.pytest_cache/
 
-# Env
+# Ambientes e variáveis
 .env
 backend/.env
 frontend/.env
+*.env
 
-# Node
+# Node / Frontend
 node_modules/
 frontend/node_modules/
 dist/
 frontend/dist/
 
-# OS / Editor
+# Documentos de teste / uploads locais
+backend/documents/
+
+# Sistema / Editor
 .DS_Store
 .vscode/
+.idea/
+
+# Logs
+*.log
