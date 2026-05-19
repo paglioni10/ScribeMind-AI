@@ -5,6 +5,8 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
 from app.services.document_ingestion_service import ingest_text_document
+from app.services.document_image_service import save_document_images
+from app.services.pdf_image_service import extract_images_from_pdf
 from app.services.pdf_service import extract_text_from_pdf
 
 
@@ -34,9 +36,7 @@ def list_documents():
         .execute()
     )
 
-    return {
-        "documents": response.data or []
-    }
+    return {"documents": response.data or []}
 
 
 @router.post("/upload")
@@ -76,7 +76,10 @@ async def upload_document(
         if normalize_title(existing_title) == normalized_new_title:
             raise HTTPException(
                 status_code=409,
-                detail="Já existe um documento com esse título. Use outro título ou exclua o documento existente.",
+                detail=(
+                    "Já existe um documento com esse título. "
+                    "Use outro título ou exclua o documento existente."
+                ),
             )
 
     raw_content = await file.read()
@@ -101,11 +104,24 @@ async def upload_document(
         source_url=f"uploaded://{file.filename}",
     )
 
+    images_saved = []
+
+    if file.filename.endswith(".pdf"):
+        extracted_images = extract_images_from_pdf(raw_content)
+
+        if extracted_images:
+            images_saved = save_document_images(
+                document_id=result["document_id"],
+                document_version_id=result["document_version_id"],
+                images=extracted_images,
+            )
+
     return {
         "message": "Documento indexado com sucesso.",
         "filename": file.filename,
         "title": clean_title,
         "source_type": source_type,
+        "images_extracted": len(images_saved),
         **result,
     }
 
