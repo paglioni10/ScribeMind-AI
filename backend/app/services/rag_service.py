@@ -137,18 +137,51 @@ Conteúdo:
 
     return "\n---\n".join(context_parts)
 
-
 def build_sources(chunks: list[dict]) -> list[dict]:
-    return [
-        {
-            "id": chunk.get("id"),
-            "source_url": chunk.get("source_url"),
-            "section_title": chunk.get("section_title"),
-            "similarity": chunk.get("similarity"),
-        }
-        for chunk in chunks
-    ]
+    supabase = get_supabase_client()
 
+    sources = []
+    seen_documents = set()
+
+    for chunk in chunks:
+        document_id = chunk.get("document_id")
+
+        # Evita repetir o mesmo documento várias vezes
+        unique_key = document_id or chunk.get("id")
+
+        if unique_key in seen_documents:
+            continue
+
+        seen_documents.add(unique_key)
+
+        images = []
+
+        if document_id:
+            images_response = (
+                supabase.table("document_images")
+                .select("id, page_number, image_index, public_url")
+                .eq("organization_id", settings.default_organization_id)
+                .eq("document_id", document_id)
+                .order("page_number")
+                .order("image_index")
+                .limit(3)
+                .execute()
+            )
+
+            images = images_response.data or []
+
+        sources.append(
+            {
+                "id": chunk.get("id"),
+                "document_id": document_id,
+                "source_url": chunk.get("source_url"),
+                "section_title": chunk.get("section_title"),
+                "similarity": chunk.get("similarity"),
+                "images": images,
+            }
+        )
+
+    return sources
 
 def answer_question(question: str) -> dict:
     chunks = search_relevant_chunks(question)

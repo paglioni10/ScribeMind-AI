@@ -491,6 +491,31 @@ function App() {
                                 Abrir fonte
                               </a>
                             )}
+
+                            {source.images && source.images.length > 0 && (
+                              <div className="mt-3 grid grid-cols-1 gap-2">
+                                {source.images.map((image) => (
+                                  <a
+                                    key={image.id}
+                                    href={image.public_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="block"
+                                  >
+                                    <p className="mb-1 text-[11px] text-slate-500">
+                                      Página {image.page_number} · Imagem{" "}
+                                      {image.image_index}
+                                    </p>
+
+                                    <img
+                                      src={image.public_url}
+                                      alt={`Página ${image.page_number}, imagem ${image.image_index}`}
+                                      className="max-h-48 w-full rounded-lg border border-slate-700 object-contain"
+                                    />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
