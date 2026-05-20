@@ -25,6 +25,10 @@ function App() {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState(null);
 
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documentImages, setDocumentImages] = useState([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+
   useEffect(() => {
     loadDocuments();
   }, []);
@@ -75,11 +79,41 @@ function App() {
         return;
       }
 
+      if (selectedDocument?.id === documentId) {
+        setSelectedDocument(null);
+        setDocumentImages([]);
+      }
+
       await loadDocuments();
     } catch (error) {
       alert("Erro ao conectar com o backend.");
     } finally {
       setDeletingDocumentId(null);
+    }
+  }
+
+  async function loadDocumentImages(document) {
+    setSelectedDocument(document);
+    setImagesLoading(true);
+    setDocumentImages([]);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/documents/${document.id}/images`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert("Erro ao carregar imagens do documento.");
+        return;
+      }
+
+      setDocumentImages(data.images || []);
+    } catch (error) {
+      alert("Erro ao conectar com o backend.");
+    } finally {
+      setImagesLoading(false);
     }
   }
 
@@ -147,7 +181,9 @@ function App() {
 
   async function uploadDocument() {
     if (!uploadTitle.trim() || !uploadFile) {
-      setUploadMessage("Informe um título e selecione um arquivo .md, .txt ou .pdf.");
+      setUploadMessage(
+        "Informe um título e selecione um arquivo .md, .txt ou .pdf."
+      );
       return;
     }
 
@@ -172,7 +208,9 @@ function App() {
       }
 
       setUploadMessage(
-        `Documento indexado com sucesso. Chunks criados: ${data.chunks_created}`
+        `Documento indexado com sucesso. Chunks criados: ${
+          data.chunks_created
+        }. Imagens extraídas: ${data.images_extracted || 0}.`
       );
 
       setUploadTitle("");
@@ -188,7 +226,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[360px_1fr]">
+      <div className="mx-auto grid min-h-screen max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[380px_1fr]">
         <aside className="space-y-4">
           <header className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
             <p className="text-sm text-cyan-400">ScribeMind AI</p>
@@ -207,7 +245,8 @@ function App() {
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              Envie arquivos .md, .txt ou .pdf para indexar no motor de conhecimento.
+              Envie arquivos .md, .txt ou .pdf para indexar no motor de
+              conhecimento.
             </p>
 
             <div className="mt-4 space-y-3">
@@ -279,9 +318,13 @@ function App() {
                 documents.map((document) => (
                   <div
                     key={document.id}
-                    className="rounded-xl border border-slate-800 bg-slate-950 p-3"
+                    className={`rounded-xl border p-3 ${
+                      selectedDocument?.id === document.id
+                        ? "border-cyan-500 bg-slate-950"
+                        : "border-slate-800 bg-slate-950"
+                    }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-100">
                           {document.title}
@@ -298,20 +341,92 @@ function App() {
                         )}
                       </div>
 
-                      <button
-                        onClick={() => deleteDocument(document.id)}
-                        disabled={deletingDocumentId === document.id}
-                        className="shrink-0 rounded-lg border border-red-900/70 px-3 py-2 text-xs text-red-300 transition hover:border-red-400 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {deletingDocumentId === document.id
-                          ? "Excluindo..."
-                          : "Excluir"}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => loadDocumentImages(document)}
+                          className="flex-1 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-400"
+                        >
+                          Ver imagens
+                        </button>
+
+                        <button
+                          onClick={() => deleteDocument(document.id)}
+                          disabled={deletingDocumentId === document.id}
+                          className="rounded-lg border border-red-900/70 px-3 py-2 text-xs text-red-300 transition hover:border-red-400 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingDocumentId === document.id
+                            ? "Excluindo..."
+                            : "Excluir"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
             </div>
           </section>
+
+          {selectedDocument && (
+            <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-100">
+                    Imagens extraídas
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {selectedDocument.title}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setSelectedDocument(null);
+                    setDocumentImages([]);
+                  }}
+                  className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-400"
+                >
+                  Fechar
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {imagesLoading && (
+                  <p className="text-xs text-slate-400">
+                    Carregando imagens...
+                  </p>
+                )}
+
+                {!imagesLoading && documentImages.length === 0 && (
+                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs text-slate-400">
+                    Nenhuma imagem extraída para este documento.
+                  </p>
+                )}
+
+                {!imagesLoading &&
+                  documentImages.map((image) => (
+                    <div
+                      key={image.id}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-3"
+                    >
+                      <p className="mb-2 text-xs text-slate-400">
+                        Página {image.page_number} · Imagem {image.image_index}
+                      </p>
+
+                      <a
+                        href={image.public_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <img
+                          src={image.public_url}
+                          alt={`Página ${image.page_number}, imagem ${image.image_index}`}
+                          className="max-h-64 w-full rounded-lg object-contain"
+                        />
+                      </a>
+                    </div>
+                  ))}
+              </div>
+            </section>
+          )}
         </aside>
 
         <section className="flex min-h-[720px] flex-col rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg">

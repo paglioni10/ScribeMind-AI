@@ -143,3 +143,22 @@ def delete_document(document_id: str):
         "document_id": document_id,
         "deleted": response.data or [],
     }
+
+@router.get("/{document_id}/images")
+def list_document_images(document_id: str):
+    supabase = get_supabase_client()
+
+    response = (
+        supabase.table("document_images")
+        .select("id, page_number, image_index, file_path, public_url, created_at")
+        .eq("organization_id", settings.default_organization_id)
+        .eq("document_id", document_id)
+        .order("page_number")
+        .order("image_index")
+        .execute()
+    )
+
+    return {
+        "document_id": document_id,
+        "images": response.data or [],
+    }
