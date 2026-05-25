@@ -1,5 +1,6 @@
 from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
+from app.services.embedding_service import generate_embedding
 from app.services.image_description_service import generate_mock_image_description
 
 
@@ -56,6 +57,31 @@ def save_document_images(
         )
 
         if image_response.data:
-            saved_images.append(image_response.data[0])
+            saved_image = image_response.data[0]
+            saved_images.append(saved_image)
+
+            visual_chunk_content = (
+                f"Descrição visual da imagem extraída do documento.\n\n"
+                f"Página: {image['page_number']}\n"
+                f"Imagem: {image['image_index']}\n\n"
+                f"{description_data['description']}\n\n"
+                f"URL da imagem: {public_url}"
+            )
+
+            supabase.table("chunks").insert(
+                {
+                    "organization_id": settings.default_organization_id,
+                    "document_id": document_id,
+                    "document_version_id": document_version_id,
+                    "content": visual_chunk_content,
+                    "embedding": generate_embedding(visual_chunk_content),
+                    "source_url": public_url,
+                    "section_title": (
+                        f"Imagem página {image['page_number']} - "
+                        f"Imagem {image['image_index']}"
+                    ),
+                    "chunk_index": 100000 + image["page_number"] * 100 + image["image_index"],
+                }
+            ).execute()
 
     return saved_images
