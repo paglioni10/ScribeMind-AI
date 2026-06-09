@@ -1,1 +1,120 @@
 @import "tailwindcss";
+
+/* ─── Escala de fonte ─────────────────────────────────────────── */
+html[data-font-size="large"]  { font-size: 112.5%; }
+html[data-font-size="xlarge"] { font-size: 125%; }
+
+/* ─── Foco visível global (fallback para elementos sem Tailwind) ─ */
+*:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+}
+
+/* Remove outline padrão apenas quando focus-visible está disponível */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ─── Alto contraste ──────────────────────────────────────────── */
+html.high-contrast {
+  --hc-bg:          #000000;
+  --hc-surface:     #111111;
+  --hc-surface2:    #1a1a1a;
+  --hc-border:      #ffffff;
+  --hc-text:        #ffffff;
+  --hc-muted:       #cccccc;
+  --hc-accent:      #ffff00;
+  --hc-accent-text: #000000;
+  --hc-danger:      #ff6b6b;
+}
+
+html.high-contrast body {
+  background-color: var(--hc-bg) !important;
+  color: var(--hc-text) !important;
+}
+
+/* Fundos */
+html.high-contrast .bg-slate-950 { background-color: var(--hc-bg)      !important; }
+html.high-contrast .bg-slate-900 { background-color: var(--hc-surface)  !important; }
+html.high-contrast .bg-slate-800 { background-color: var(--hc-surface2) !important; }
+
+/* Bordas */
+html.high-contrast .border-slate-800,
+html.high-contrast .border-slate-700 { border-color: var(--hc-border) !important; }
+html.high-contrast .border-cyan-500  { border-color: var(--hc-accent) !important; }
+
+/* Texto */
+html.high-contrast .text-slate-100,
+html.high-contrast .text-white         { color: var(--hc-text)   !important; }
+html.high-contrast .text-slate-300     { color: var(--hc-text)   !important; }
+html.high-contrast .text-slate-400,
+html.high-contrast .text-slate-500     { color: var(--hc-muted)  !important; }
+html.high-contrast .text-cyan-400      { color: var(--hc-accent) !important; }
+
+/* Botão primário */
+html.high-contrast .bg-cyan-500 {
+  background-color: var(--hc-accent) !important;
+  color: var(--hc-accent-text) !important;
+}
+html.high-contrast .hover\:bg-cyan-400:hover {
+  background-color: #e6e600 !important;
+}
+
+/* Mensagem do usuário no chat */
+html.high-contrast .text-slate-950 { color: #000 !important; }
+
+/* Fontes de resposta */
+html.high-contrast .bg-slate-900.p-3 { background-color: #111 !important; }
+
+/* Dangeroso — botão excluir */
+html.high-contrast .border-red-900\/70 { border-color: var(--hc-danger) !important; }
+html.high-contrast .text-red-300       { color: var(--hc-danger) !important; }
+
+/* Badges */
+html.high-contrast .bg-emerald-900\/60 { background-color: #003300 !important; }
+html.high-contrast .text-emerald-300   { color: #00ff88 !important; }
+html.high-contrast .bg-amber-900\/60   { background-color: #332200 !important; }
+html.high-contrast .text-amber-300     { color: #ffcc00 !important; }
+html.high-contrast .bg-purple-900\/50  { background-color: #220033 !important; }
+html.high-contrast .text-purple-300    { color: #dd88ff !important; }
+html.high-contrast .bg-cyan-900\/40    { background-color: #002233 !important; }
+
+/* Foco em alto contraste — anel mais visível */
+html.high-contrast *:focus-visible {
+  outline: 3px solid var(--hc-accent) !important;
+  outline-offset: 2px !important;
+}
+
+/* ─── Acessibilidade — utilitários ───────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ─── Reduz movimento para quem prefere ──────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

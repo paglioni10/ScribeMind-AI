@@ -12,6 +12,7 @@ def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
     supabase = get_supabase_client()
 
     if settings.use_mock_ai:
+        # inclui image_id na query do mock
         stopwords = {
             "como",
             "para",
@@ -64,7 +65,7 @@ def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
 
         response = (
             supabase.table("chunks")
-            .select("id, content, source_url, section_title, document_id, chunk_index")
+            .select("id, content, source_url, section_title, document_id, chunk_index, image_id")
             .eq("organization_id", settings.default_organization_id)
             .execute()
         )
@@ -111,7 +112,24 @@ def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
         },
     ).execute()
 
-    return response.data or []
+    chunks = response.data or []
+
+    # Busca image_id para chunks que não retornam via RPC
+    if chunks:
+        chunk_ids = [c["id"] for c in chunks if "image_id" not in c]
+        if chunk_ids:
+            extra = (
+                supabase.table("chunks")
+                .select("id, image_id")
+                .in_("id", chunk_ids)
+                .execute()
+            )
+            image_id_map = {row["id"]: row.get("image_id") for row in (extra.data or [])}
+            for chunk in chunks:
+                if "image_id" not in chunk:
+                    chunk["image_id"] = image_id_map.get(chunk["id"])
+
+    return chunks
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -141,42 +159,63 @@ def build_sources(chunks: list[dict]) -> list[dict]:
     supabase = get_supabase_client()
 
     sources = []
-    seen_documents = set()
+    seen_keys = set()
 
     for chunk in chunks:
         document_id = chunk.get("document_id")
+        image_id = chunk.get("image_id")
 
-        # Evita repetir o mesmo documento várias vezes
-        unique_key = document_id or chunk.get("id")
+        # Chunks visuais (image_id preenchido) são únicos por imagem.
+        # Chunks de texto são agrupados por documento.
+        unique_key = image_id if image_id else document_id or chunk.get("id")
 
-        if unique_key in seen_documents:
+        if unique_key in seen_keys:
             continue
 
-        seen_documents.add(unique_key)
+        seen_keys.add(unique_key)
 
         images = []
 
-        if document_id:
-            images_response = (
+        if image_id:
+            # Chunk visual: retorna a imagem específica com seus metadados de descrição
+            img_response = (
                 supabase.table("document_images")
-                .select("id, page_number, image_index, public_url")
+                .select(
+                    "id, page_number, image_index, public_url, "
+                    "description, description_status, description_provider"
+                )
+                .eq("id", image_id)
+                .execute()
+            )
+            images = img_response.data or []
+
+        elif document_id:
+            # Chunk de texto: retorna até 3 imagens do documento
+            img_response = (
+                supabase.table("document_images")
+                .select(
+                    "id, page_number, image_index, public_url, "
+                    "description, description_status, description_provider"
+                )
                 .eq("organization_id", settings.default_organization_id)
                 .eq("document_id", document_id)
+                .eq("description_status", "completed")
                 .order("page_number")
                 .order("image_index")
                 .limit(3)
                 .execute()
             )
-
-            images = images_response.data or []
+            images = img_response.data or []
 
         sources.append(
             {
                 "id": chunk.get("id"),
                 "document_id": document_id,
+                "image_id": image_id,
                 "source_url": chunk.get("source_url"),
                 "section_title": chunk.get("section_title"),
                 "similarity": chunk.get("similarity"),
+                "is_visual_chunk": bool(image_id),
                 "images": images,
             }
         )

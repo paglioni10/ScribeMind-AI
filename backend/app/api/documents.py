@@ -150,7 +150,10 @@ def list_document_images(document_id: str):
 
     response = (
         supabase.table("document_images")
-        .select("id, page_number, image_index, file_path, public_url, created_at")
+        .select(
+            "id, page_number, image_index, file_path, public_url, "
+            "description, description_status, description_provider, described_at, created_at"
+        )
         .eq("organization_id", settings.default_organization_id)
         .eq("document_id", document_id)
         .order("page_number")
