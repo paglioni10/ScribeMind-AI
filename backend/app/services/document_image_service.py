@@ -11,6 +11,7 @@ def save_document_images(
     document_id: str,
     document_version_id: str,
     images: list[dict],
+    organization_id: str,
 ) -> list[dict]:
     supabase = get_supabase_client()
 
@@ -18,7 +19,7 @@ def save_document_images(
 
     for image in images:
         file_path = (
-            f"{settings.default_organization_id}/"
+            f"{organization_id}/"
             f"{document_id}/"
             f"page-{image['page_number']}-image-{image['image_index']}.png"
         )
@@ -40,7 +41,7 @@ def save_document_images(
             supabase.table("document_images")
             .insert(
                 {
-                    "organization_id": settings.default_organization_id,
+                    "organization_id": organization_id,
                     "document_id": document_id,
                     "document_version_id": document_version_id,
                     "page_number": image["page_number"],
@@ -71,7 +72,7 @@ def save_document_images(
 
             supabase.table("chunks").insert(
                 {
-                    "organization_id": settings.default_organization_id,
+                    "organization_id": organization_id,
                     "document_id": document_id,
                     "document_version_id": document_version_id,
                     "content": visual_chunk_content,

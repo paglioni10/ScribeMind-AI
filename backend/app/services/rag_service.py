@@ -8,7 +8,9 @@ from app.services.embedding_service import generate_embedding
 client = OpenAI(api_key=settings.openai_api_key)
 
 
-def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
+def search_relevant_chunks(
+    question: str, org_id: str, match_count: int = 5
+) -> list[dict]:
     supabase = get_supabase_client()
 
     if settings.use_mock_ai:
@@ -66,7 +68,7 @@ def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
         response = (
             supabase.table("chunks")
             .select("id, content, source_url, section_title, document_id, chunk_index, image_id")
-            .eq("organization_id", settings.default_organization_id)
+            .eq("organization_id", org_id)
             .execute()
         )
 
@@ -108,7 +110,7 @@ def search_relevant_chunks(question: str, match_count: int = 5) -> list[dict]:
         {
             "query_embedding": query_embedding,
             "match_count": match_count,
-            "org_id": settings.default_organization_id,
+            "org_id": org_id,
         },
     ).execute()
 
@@ -155,7 +157,7 @@ Conteúdo:
 
     return "\n---\n".join(context_parts)
 
-def build_sources(chunks: list[dict]) -> list[dict]:
+def build_sources(chunks: list[dict], org_id: str) -> list[dict]:
     supabase = get_supabase_client()
 
     sources = []
@@ -197,7 +199,7 @@ def build_sources(chunks: list[dict]) -> list[dict]:
                     "id, page_number, image_index, public_url, "
                     "description, description_status, description_provider"
                 )
-                .eq("organization_id", settings.default_organization_id)
+                .eq("organization_id", org_id)
                 .eq("document_id", document_id)
                 .eq("description_status", "completed")
                 .order("page_number")
@@ -222,8 +224,8 @@ def build_sources(chunks: list[dict]) -> list[dict]:
 
     return sources
 
-def answer_question(question: str) -> dict:
-    chunks = search_relevant_chunks(question)
+def answer_question(question: str, org_id: str) -> dict:
+    chunks = search_relevant_chunks(question, org_id)
     context = build_context(chunks)
 
     if settings.use_mock_ai:
@@ -242,7 +244,7 @@ def answer_question(question: str) -> dict:
                 f"{content}\n\n"
                 "Fonte: [Fonte 1]"
             ),
-            "sources": build_sources(chunks),
+            "sources": build_sources(chunks, org_id),
         }
 
     system_prompt = """
@@ -276,5 +278,5 @@ Contexto recuperado:
 
     return {
         "answer": response.choices[0].message.content,
-        "sources": build_sources(chunks),
+        "sources": build_sources(chunks, org_id),
     }

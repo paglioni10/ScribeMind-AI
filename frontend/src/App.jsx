@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import "./index.css";
 import { AccessibilityProvider } from "./context/AccessibilityContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AccessibilityBar } from "./components/AccessibilityBar";
 import { ChatPanel } from "./components/ChatPanel";
 import { DocumentUpload } from "./components/DocumentUpload";
 import { DocumentList } from "./components/DocumentList";
 import { ImageGallery } from "./components/ImageGallery";
+import { MembersPanel } from "./components/MembersPanel";
 import { VLibras } from "./components/VLibras";
-
-const API = "http://127.0.0.1:8000";
+import { AuthScreen } from "./components/auth/AuthScreen";
+import { apiFetch } from "./lib/api";
 
 const INITIAL_MESSAGES = [
   {
@@ -19,7 +21,45 @@ const INITIAL_MESSAGES = [
   },
 ];
 
+function TopBar() {
+  const { user, logout } = useAuth();
+  return (
+    <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-bold text-cyan-400">ScribeMind AI</span>
+        {user?.organization?.name && (
+          <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+            {user.organization.name}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="text-right">
+          <p className="text-xs font-medium text-slate-200">
+            {user?.full_name || user?.email}
+          </p>
+          <p className="text-[11px] text-slate-500">
+            {user?.role === "owner"
+              ? "Owner"
+              : user?.role === "admin"
+              ? "Admin"
+              : "Membro"}
+          </p>
+        </div>
+        <button
+          onClick={logout}
+          className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 transition hover:border-red-400 hover:text-red-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        >
+          Sair
+        </button>
+      </div>
+    </header>
+  );
+}
+
 function AppContent() {
+  const { isAdmin } = useAuth();
+
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,6 +78,7 @@ function AppContent() {
   const [imagesLoading, setImagesLoading] = useState(false);
 
   const [vlibrasEnabled, setVlibrasEnabled] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -46,11 +87,11 @@ function AppContent() {
   async function loadDocuments() {
     setDocumentsLoading(true);
     try {
-      const response = await fetch(`${API}/documents/`);
+      const response = await apiFetch("/documents/");
       const data = await response.json();
       if (response.ok) setDocuments(data.documents || []);
     } catch {
-      // falha silenciosa — estado vazio já comunica isso
+      // estado vazio comunica a falha
     } finally {
       setDocumentsLoading(false);
     }
@@ -61,11 +102,12 @@ function AppContent() {
 
     setDeletingDocumentId(documentId);
     try {
-      const response = await fetch(`${API}/documents/${documentId}`, {
+      const response = await apiFetch(`/documents/${documentId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
-        alert("Erro ao excluir documento.");
+        const data = await response.json().catch(() => ({}));
+        alert(data.detail || "Erro ao excluir documento.");
         return;
       }
       if (selectedDocument?.id === documentId) {
@@ -85,7 +127,7 @@ function AppContent() {
     setImagesLoading(true);
     setDocumentImages([]);
     try {
-      const response = await fetch(`${API}/documents/${document.id}/images`);
+      const response = await apiFetch(`/documents/${document.id}/images`);
       const data = await response.json();
       if (!response.ok) {
         alert("Erro ao carregar imagens do documento.");
@@ -111,10 +153,9 @@ function AppContent() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API}/chat/`, {
+      const response = await apiFetch("/chat/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: currentQuestion }),
+        body: { question: currentQuestion },
       });
       const data = await response.json();
       if (!response.ok) {
@@ -159,7 +200,7 @@ function AppContent() {
     setUploadMessage("");
 
     try {
-      const response = await fetch(`${API}/documents/upload`, {
+      const response = await apiFetch("/documents/upload", {
         method: "POST",
         body: formData,
       });
@@ -183,13 +224,14 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Skip link para navegação por teclado */}
       <a
         href="#main-chat"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-cyan-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950 focus:shadow-lg focus-visible:outline-none"
       >
         Pular para o chat
       </a>
+
+      <TopBar />
 
       <AccessibilityBar
         vlibrasEnabled={vlibrasEnabled}
@@ -202,23 +244,7 @@ function AppContent() {
         className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[380px_1fr]"
         role="main"
       >
-        <aside
-          aria-label="Painel de gerenciamento de documentos"
-          className="space-y-4"
-        >
-          <header className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
-            <p className="text-sm text-cyan-400" aria-hidden="true">
-              ScribeMind AI
-            </p>
-            <h1 className="mt-1 text-2xl font-bold">
-              Knowledge Engine Corporativo
-            </h1>
-            <p className="mt-2 text-sm text-slate-400">
-              Consulte processos internos com respostas baseadas em documentos
-              oficiais.
-            </p>
-          </header>
-
+        <aside aria-label="Painel de gerenciamento" className="space-y-4">
           <DocumentUpload
             uploadTitle={uploadTitle}
             setUploadTitle={setUploadTitle}
@@ -248,6 +274,19 @@ function AppContent() {
               setDocumentImages([]);
             }}
           />
+
+          {isAdmin && (
+            <div>
+              <button
+                onClick={() => setShowMembers((s) => !s)}
+                aria-expanded={showMembers}
+                className="mb-2 w-full rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              >
+                {showMembers ? "Ocultar equipe" : "Gerenciar equipe"}
+              </button>
+              {showMembers && <MembersPanel />}
+            </div>
+          )}
         </aside>
 
         <ChatPanel
@@ -266,10 +305,32 @@ function AppContent() {
   );
 }
 
+function Root() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400"
+      >
+        Carregando...
+      </div>
+    );
+  }
+
+  if (!user) return <AuthScreen />;
+
+  return <AppContent />;
+}
+
 export default function App() {
   return (
-    <AccessibilityProvider>
-      <AppContent />
-    </AccessibilityProvider>
+    <AuthProvider>
+      <AccessibilityProvider>
+        <Root />
+      </AccessibilityProvider>
+    </AuthProvider>
   );
 }

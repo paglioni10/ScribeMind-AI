@@ -1,9 +1,9 @@
 import unicodedata
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
+from app.services.auth_service import CurrentUser, get_current_user, require_role
 from app.services.document_ingestion_service import ingest_text_document
 from app.services.document_image_service import save_document_images
 from app.services.pdf_image_service import extract_images_from_pdf
@@ -25,13 +25,13 @@ def normalize_title(title: str) -> str:
 
 
 @router.get("/")
-def list_documents():
+def list_documents(user: CurrentUser = Depends(get_current_user)):
     supabase = get_supabase_client()
 
     response = (
         supabase.table("documents")
         .select("id, title, source_type, source_url, created_at")
-        .eq("organization_id", settings.default_organization_id)
+        .eq("organization_id", user.organization_id)
         .order("created_at", desc=True)
         .execute()
     )
@@ -43,14 +43,12 @@ def list_documents():
 async def upload_document(
     file: UploadFile = File(...),
     title: str = Form(...),
+    user: CurrentUser = Depends(get_current_user),
 ):
     clean_title = title.strip()
 
     if not clean_title:
-        raise HTTPException(
-            status_code=400,
-            detail="Informe um título para o documento.",
-        )
+        raise HTTPException(status_code=400, detail="Informe um título para o documento.")
 
     if not file.filename.endswith((".md", ".txt", ".pdf")):
         raise HTTPException(
@@ -63,7 +61,7 @@ async def upload_document(
     documents_response = (
         supabase.table("documents")
         .select("id, title")
-        .eq("organization_id", settings.default_organization_id)
+        .eq("organization_id", user.organization_id)
         .execute()
     )
 
@@ -71,9 +69,7 @@ async def upload_document(
     normalized_new_title = normalize_title(clean_title)
 
     for document in existing_documents:
-        existing_title = document.get("title", "")
-
-        if normalize_title(existing_title) == normalized_new_title:
+        if normalize_title(document.get("title", "")) == normalized_new_title:
             raise HTTPException(
                 status_code=409,
                 detail=(
@@ -100,6 +96,7 @@ async def upload_document(
     result = ingest_text_document(
         title=clean_title,
         content=content,
+        organization_id=user.organization_id,
         source_type=source_type,
         source_url=f"uploaded://{file.filename}",
     )
@@ -114,6 +111,7 @@ async def upload_document(
                 document_id=result["document_id"],
                 document_version_id=result["document_version_id"],
                 images=extracted_images,
+                organization_id=user.organization_id,
             )
 
     return {
@@ -127,14 +125,17 @@ async def upload_document(
 
 
 @router.delete("/{document_id}")
-def delete_document(document_id: str):
+def delete_document(
+    document_id: str,
+    user: CurrentUser = Depends(require_role("admin")),
+):
     supabase = get_supabase_client()
 
     response = (
         supabase.table("documents")
         .delete()
         .eq("id", document_id)
-        .eq("organization_id", settings.default_organization_id)
+        .eq("organization_id", user.organization_id)
         .execute()
     )
 
@@ -144,8 +145,12 @@ def delete_document(document_id: str):
         "deleted": response.data or [],
     }
 
+
 @router.get("/{document_id}/images")
-def list_document_images(document_id: str):
+def list_document_images(
+    document_id: str,
+    user: CurrentUser = Depends(get_current_user),
+):
     supabase = get_supabase_client()
 
     response = (
@@ -154,7 +159,7 @@ def list_document_images(document_id: str):
             "id, page_number, image_index, file_path, public_url, "
             "description, description_status, description_provider, described_at, created_at"
         )
-        .eq("organization_id", settings.default_organization_id)
+        .eq("organization_id", user.organization_id)
         .eq("document_id", document_id)
         .order("page_number")
         .order("image_index")

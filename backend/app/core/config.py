@@ -7,12 +7,16 @@ class Settings(BaseSettings):
 
     supabase_url: str
     supabase_key: str
+    # Service role key — usada para operações administrativas (criar org,
+    # membros, ignorar RLS). Se vazia, cai de volta para supabase_key.
+    supabase_service_key: str = ""
 
     openai_api_key: str
     openai_model: str = "gpt-4o-mini"
     embedding_model: str = "text-embedding-3-small"
 
-    default_organization_id: str
+    # Mantido como fallback / seed. Com multiusuário, o org_id vem do usuário.
+    default_organization_id: str = ""
     use_mock_ai: bool = False
 
     model_config = SettingsConfigDict(env_file=".env")

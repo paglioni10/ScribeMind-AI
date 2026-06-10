@@ -1,13 +1,35 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>ScribeMind AI — Knowledge Engine Corporativo</title>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- VLibras — inicializado VISÍVEL aqui (o widget precisa calcular layout
+         na construção). O React controla mostrar/ocultar depois. -->
+    <div vw class="enabled" id="vlibras-widget">
+      <div vw-access-button class="active"></div>
+      <div vw-plugin-wrapper>
+        <div class="vw-plugin-top-wrapper"></div>
+      </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+      // Script clássico (bloqueante): executa após o plugin carregar e antes
+      // do módulo do React. Constrói o widget enquanto ainda está visível.
+      try {
+        if (window.VLibras) {
+          new window.VLibras.Widget("https://vlibras.gov.br/app");
+        }
+      } catch (e) {
+        console.error("Falha ao inicializar VLibras:", e);
+      }
+    </script>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

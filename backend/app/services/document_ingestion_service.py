@@ -25,6 +25,7 @@ def split_text_into_chunks(text: str, max_chars: int = 1000) -> list[str]:
 def ingest_text_document(
     title: str,
     content: str,
+    organization_id: str,
     source_type: str = "upload",
     source_url: str | None = None,
 ) -> dict:
@@ -32,7 +33,7 @@ def ingest_text_document(
 
     document_response = supabase.table("documents").insert(
         {
-            "organization_id": settings.default_organization_id,
+            "organization_id": organization_id,
             "title": title,
             "source_type": source_type,
             "source_url": source_url,
@@ -57,7 +58,7 @@ def ingest_text_document(
 
         supabase.table("chunks").insert(
             {
-                "organization_id": settings.default_organization_id,
+                "organization_id": organization_id,
                 "document_id": document["id"],
                 "document_version_id": document_version["id"],
                 "content": chunk,
