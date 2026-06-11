@@ -1,8 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSpeechSynthesis } from "../hooks/useSpeechSynthesis";
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
+import { cleanAiText } from "../lib/text";
+import { Lightbox } from "./Lightbox";
 
-function ImageSource({ image }) {
+function ImageSource({ image, onOpenImage }) {
+  const altText = image.description
+    ? cleanAiText(image.description)
+    : `Página ${image.page_number}, imagem ${image.image_index}`;
+
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -28,25 +34,22 @@ function ImageSource({ image }) {
         )}
       </div>
 
-      <a
-        href={image.public_url}
-        target="_blank"
-        rel="noreferrer"
-        aria-label={`Abrir imagem da página ${image.page_number} em nova aba`}
+      <button
+        type="button"
+        onClick={() => onOpenImage(image.public_url, altText)}
+        aria-label={`Ampliar imagem da página ${image.page_number}`}
+        className="group block w-full overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
         <img
           src={image.public_url}
-          alt={
-            image.description ||
-            `Página ${image.page_number}, imagem ${image.image_index}`
-          }
-          className="max-h-48 w-full rounded-lg object-contain"
+          alt={altText}
+          className="max-h-48 w-full cursor-zoom-in rounded-lg object-contain transition group-hover:opacity-90"
         />
-      </a>
+      </button>
 
       {image.description && image.description_status === "completed" && (
-        <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-          {image.description}
+        <p className="mt-2 whitespace-pre-wrap text-[11px] leading-relaxed text-slate-400">
+          {cleanAiText(image.description)}
         </p>
       )}
     </div>
@@ -107,7 +110,10 @@ export function ChatPanel({
 }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const [lightbox, setLightbox] = useState(null); // { src, alt }
   const { speak, stop, speaking, supported: ttsSupported } = useSpeechSynthesis();
+
+  const openImage = (src, alt) => setLightbox({ src, alt });
 
   const { listening, start: startListening, stop: stopListening, supported: sttSupported } =
     useSpeechRecognition({ onResult: (text) => setQuestion(text) });
@@ -184,12 +190,16 @@ export function ChatPanel({
                   : "Resposta do assistente"
               }
             >
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              <div className="whitespace-pre-wrap">
+                {message.role === "assistant"
+                  ? cleanAiText(message.content)
+                  : message.content}
+              </div>
 
               {/* TTS por mensagem */}
               {message.role === "assistant" && ttsSupported && (
                 <SpeakButton
-                  text={message.content}
+                  text={cleanAiText(message.content)}
                   speak={speak}
                   stop={stop}
                   speaking={speaking}
@@ -237,7 +247,11 @@ export function ChatPanel({
                         {source.images && source.images.length > 0 && (
                           <div className="mt-3 grid grid-cols-1 gap-2">
                             {source.images.map((image) => (
-                              <ImageSource key={image.id} image={image} />
+                              <ImageSource
+                                key={image.id}
+                                image={image}
+                                onOpenImage={openImage}
+                              />
                             ))}
                           </div>
                         )}
@@ -346,6 +360,14 @@ export function ChatPanel({
           Enviar
         </button>
       </div>
+
+      {lightbox && (
+        <Lightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </section>
   );
 }

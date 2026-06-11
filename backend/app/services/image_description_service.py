@@ -1,12 +1,11 @@
 import base64
 from datetime import datetime, timezone
 
-from openai import OpenAI
-
 from app.core.config import settings
+from app.services.ai_client import get_ai_client
 
 
-client = OpenAI(api_key=settings.openai_api_key)
+client = get_ai_client()
 
 
 def _mock_description(image: dict) -> dict:
@@ -48,11 +47,14 @@ def _vision_description(image: dict) -> dict:
         "- Elementos visíveis: botões, menus, campos, textos, ícones\n"
         "- Qual etapa ou ação o usuário deve executar, se aplicável\n"
         "- Informações relevantes para responder perguntas sobre o processo\n\n"
-        "Seja específico e direto. Não use introduções genéricas."
+        "Seja específico e direto. Não use introduções genéricas.\n"
+        "Responda em texto corrido e simples, em português. NÃO use formatação "
+        "markdown: nada de asteriscos, **negrito**, títulos com # ou listas com "
+        "marcadores. Se precisar enumerar, escreva em frases ou use traços simples."
     )
 
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=settings.vision_model,
         messages=[
             {
                 "role": "user",
@@ -79,7 +81,7 @@ def _vision_description(image: dict) -> dict:
     return {
         "description": description,
         "description_status": "completed",
-        "description_provider": "openai-vision",
+        "description_provider": settings.vision_model,
         "described_at": datetime.now(timezone.utc).isoformat(),
     }
 

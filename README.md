@@ -83,7 +83,7 @@ O ScribeMind AI busca transformar essa documentação passiva em um assistente a
 - FastAPI
 - Supabase (Auth + Postgres + Storage)
 - pgvector
-- OpenAI SDK (embeddings + Vision)
+- SDK compatível com OpenAI (provider configurável: **Google Gemini** por padrão, OpenAI ou Ollama)
 - Uvicorn
 - pypdf
 - PyMuPDF
@@ -125,13 +125,25 @@ Tabelas principais:
 SUPABASE_URL=
 SUPABASE_KEY=
 SUPABASE_SERVICE_KEY=        # opcional; usado para operações administrativas
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-4o-mini
-EMBEDDING_MODEL=text-embedding-3-small
+
+# Provider de IA (compatível com OpenAI). Padrão: Google Gemini (free tier).
+# Crie a chave gratuita em https://aistudio.google.com/apikey
+AI_API_KEY=
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+CHAT_MODEL=gemini-2.5-flash-lite
+VISION_MODEL=gemini-2.5-flash-lite
+EMBEDDING_MODEL=gemini-embedding-001
+EMBEDDING_DIM=768
+
 ENVIRONMENT=development
 DEFAULT_ORGANIZATION_ID=      # fallback/seed; o org_id real vem do usuário
-USE_MOCK_AI=true              # true = não gasta API da OpenAI
+USE_MOCK_AI=true              # true = não chama a IA (mock, sem gastar cota)
 ```
+
+> **Providers alternativos:** para **OpenAI**, use `AI_BASE_URL=https://api.openai.com/v1`,
+> modelos `gpt-4o-mini` / `text-embedding-3-small` e `EMBEDDING_DIM=1536`. Para **Ollama** local,
+> use `AI_BASE_URL=http://localhost:11434/v1` e modelos locais. A dimensão dos embeddings precisa
+> bater com a do banco (ver migração).
 
 2. No painel do Supabase, em **Authentication > Providers**, habilite **Email** e
    **desligue "Confirm email"** em desenvolvimento (evita rate limit de e-mail e
@@ -142,6 +154,8 @@ USE_MOCK_AI=true              # true = não gasta API da OpenAI
    - `migration_multiuser.sql`
    - `migration_analytics.sql`
    - `migration_dashboard_access.sql`
+   - `migration_gemini_embeddings.sql` (ajusta a dimensão dos embeddings para 768;
+     se já tinha documentos indexados, use o botão **Reprocessar** depois para re-gerar)
 
    Ao avisar sobre RLS, escolha **Run without RLS** (a autorização é feita na camada
    da aplicação).
@@ -181,6 +195,7 @@ scribemind_ai/
 │   │   ├── db/
 │   │   │   └── supabase_client.py
 │   │   ├── services/
+│   │   │   ├── ai_client.py
 │   │   │   ├── analytics_service.py
 │   │   │   ├── auth_service.py
 │   │   │   ├── conversation_service.py
@@ -199,7 +214,8 @@ scribemind_ai/
 │   │   ├── migration_add_image_id_to_chunks.sql
 │   │   ├── migration_multiuser.sql
 │   │   ├── migration_analytics.sql
-│   │   └── migration_dashboard_access.sql
+│   │   ├── migration_dashboard_access.sql
+│   │   └── migration_gemini_embeddings.sql
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/

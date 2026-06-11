@@ -13,31 +13,77 @@ function MetricCard({ label, value, hint, accent = "text-cyan-400" }) {
 
 function QuestionsChart({ data }) {
   const max = Math.max(1, ...data.map((d) => d.count));
+  const total = data.reduce((sum, d) => sum + d.count, 0);
+  const lastIndex = data.length - 1;
+
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
-      <p className="text-sm font-semibold text-slate-100">Perguntas nos últimos 7 dias</p>
-      <div
-        className="mt-4 flex h-40 items-end gap-2"
-        role="img"
-        aria-label={`Gráfico de perguntas por dia: ${data
-          .map((d) => `${d.date} com ${d.count}`)
-          .join(", ")}`}
-      >
-        {data.map((d) => (
-          <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
-            <div className="flex w-full flex-1 items-end">
+      <div className="flex items-baseline justify-between">
+        <p className="text-sm font-semibold text-slate-100">
+          Perguntas nos últimos 7 dias
+        </p>
+        <p className="text-xs text-slate-400">
+          <span className="font-bold text-cyan-400">{total}</span> no total
+        </p>
+      </div>
+
+      <div className="relative mt-6">
+        {/* Linhas de grade horizontais */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="border-t border-slate-800/70" />
+          ))}
+        </div>
+
+        <div
+          className="relative flex h-44 items-end gap-2"
+          role="img"
+          aria-label={`Gráfico de perguntas por dia: ${data
+            .map((d) => `${d.date} com ${d.count} pergunta(s)`)
+            .join(", ")}`}
+        >
+          {data.map((d, index) => {
+            const isToday = index === lastIndex;
+            const heightPct = d.count === 0 ? 0 : Math.max(6, (d.count / max) * 100);
+
+            return (
               <div
-                className="w-full rounded-t bg-cyan-500/80"
-                style={{ height: `${(d.count / max) * 100}%` }}
-                title={`${d.count} pergunta(s)`}
-              />
-            </div>
-            <span className="text-[10px] text-slate-500">
-              {d.date.slice(8, 10)}/{d.date.slice(5, 7)}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-300">{d.count}</span>
-          </div>
-        ))}
+                key={d.date}
+                className="group flex h-full flex-1 flex-col items-center"
+              >
+                {/* Trilha (coluna de fundo) — dá presença visual mesmo com 0 */}
+                <div className="relative flex w-full flex-1 items-end overflow-hidden rounded-lg bg-slate-950/60">
+                  {d.count > 0 ? (
+                    <div
+                      className={`w-full rounded-lg bg-gradient-to-t transition-all duration-500 ${
+                        isToday
+                          ? "from-cyan-600 to-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.45)]"
+                          : "from-cyan-700/70 to-cyan-400/80 group-hover:from-cyan-600 group-hover:to-cyan-300"
+                      }`}
+                      style={{ height: `${heightPct}%` }}
+                      title={`${d.count} pergunta(s)`}
+                    >
+                      <span className="mt-1 block text-center text-[11px] font-bold text-slate-950">
+                        {d.count}
+                      </span>
+                    </div>
+                  ) : (
+                    // Dia sem perguntas: tracinho na base, em vez de vazio
+                    <div className="h-[3px] w-full rounded-full bg-slate-700" />
+                  )}
+                </div>
+
+                <span
+                  className={`mt-2 text-[10px] ${
+                    isToday ? "font-semibold text-cyan-400" : "text-slate-500"
+                  }`}
+                >
+                  {d.date.slice(8, 10)}/{d.date.slice(5, 7)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

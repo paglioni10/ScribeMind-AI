@@ -1,11 +1,10 @@
-from openai import OpenAI
-
 from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
+from app.services.ai_client import get_ai_client
 from app.services.embedding_service import generate_embedding
 
 
-client = OpenAI(api_key=settings.openai_api_key)
+client = get_ai_client()
 
 
 def search_relevant_chunks(
@@ -259,6 +258,8 @@ Regras obrigatórias:
 - Responda em português.
 - Seja claro, direto e operacional.
 - Quando possível, cite a fonte usando o formato [Fonte 1], [Fonte 2], etc.
+- Responda em texto corrido e simples. NÃO use formatação markdown: nada de
+  asteriscos, **negrito**, títulos com # ou listas com marcadores.
 """
 
     user_prompt = f"""
@@ -270,7 +271,7 @@ Contexto recuperado:
 """
 
     response = client.chat.completions.create(
-        model=settings.openai_model,
+        model=settings.chat_model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},

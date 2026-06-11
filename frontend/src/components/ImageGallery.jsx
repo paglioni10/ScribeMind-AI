@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { cleanAiText } from "../lib/text";
+import { Lightbox } from "./Lightbox";
 
 export function ImageGallery({
   selectedDocument,
@@ -7,20 +9,21 @@ export function ImageGallery({
   onClose,
 }) {
   const closeButtonRef = useRef(null);
+  const [lightbox, setLightbox] = useState(null); // { src, alt }
 
   // Move foco para o botão fechar ao abrir
   useEffect(() => {
     if (selectedDocument) closeButtonRef.current?.focus();
   }, [selectedDocument]);
 
-  // Fecha com Escape
+  // Fecha com Escape (mas não quando o lightbox está aberto — ele tem o próprio Esc)
   useEffect(() => {
     function handleKeyDown(event) {
-      if (event.key === "Escape" && selectedDocument) onClose();
+      if (event.key === "Escape" && selectedDocument && !lightbox) onClose();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedDocument, onClose]);
+  }, [selectedDocument, onClose, lightbox]);
 
   if (!selectedDocument) return null;
 
@@ -95,21 +98,29 @@ export function ImageGallery({
                   )}
               </div>
 
-              <a
-                href={image.public_url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`Abrir imagem da página ${image.page_number} em nova aba`}
+              <button
+                type="button"
+                onClick={() =>
+                  setLightbox({
+                    src: image.public_url,
+                    alt: image.description
+                      ? cleanAiText(image.description)
+                      : `Imagem ${image.image_index} da página ${image.page_number} do documento ${selectedDocument.title}`,
+                  })
+                }
+                aria-label={`Ampliar imagem da página ${image.page_number}`}
+                className="group block w-full overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
               >
                 <img
                   src={image.public_url}
                   alt={
-                    image.description ||
-                    `Imagem ${image.image_index} da página ${image.page_number} do documento ${selectedDocument.title}`
+                    image.description
+                      ? cleanAiText(image.description)
+                      : `Imagem ${image.image_index} da página ${image.page_number} do documento ${selectedDocument.title}`
                   }
-                  className="max-h-64 w-full rounded-lg object-contain"
+                  className="max-h-64 w-full cursor-zoom-in rounded-lg object-contain transition group-hover:opacity-90"
                 />
-              </a>
+              </button>
 
               {image.description && (
                 <figcaption className="mt-3 rounded-lg border border-slate-800 bg-slate-900 p-2">
@@ -119,14 +130,22 @@ export function ImageGallery({
                   >
                     Descrição IA
                   </p>
-                  <p className="text-[11px] leading-relaxed text-slate-300">
-                    {image.description}
+                  <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-slate-300">
+                    {cleanAiText(image.description)}
                   </p>
                 </figcaption>
               )}
             </figure>
           ))}
       </div>
+
+      {lightbox && (
+        <Lightbox
+          src={lightbox.src}
+          alt={lightbox.alt}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </section>
   );
 }

@@ -182,7 +182,7 @@ function AppContent() {
   async function reprocessDocument(documentId) {
     if (
       !window.confirm(
-        "Reprocessar este documento? Isso re-gera embeddings e descrições de imagem (pode consumir API da OpenAI)."
+        "Reprocessar este documento? Isso re-gera os embeddings e as descrições das imagens via IA (Gemini)."
       )
     )
       return;
