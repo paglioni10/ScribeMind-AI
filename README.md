@@ -30,10 +30,10 @@ O ScribeMind AI busca transformar essa documentação passiva em um assistente a
 - Separação de documentos em chunks com embeddings
 - Listagem e exclusão de documentos
 - Bloqueio de documentos duplicados por título
-- Busca mock por texto para desenvolvimento sem gastar API da OpenAI
+- Busca mock por texto para desenvolvimento sem gastar a cota da IA
 
 ### IA Vision e RAG multimodal
-- Geração de descrição real das imagens via OpenAI Vision (GPT-4o-mini)
+- Geração de descrição real das imagens via IA Vision (Google Gemini)
 - Persistência da descrição, status (`completed` / `mock`) e provider no banco
 - Criação de *chunks visuais* a partir das descrições, vinculados à imagem de origem (`chunks.image_id`)
 - Chat que combina **texto do documento + descrições das imagens**, permitindo respostas como
