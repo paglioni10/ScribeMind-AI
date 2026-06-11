@@ -233,6 +233,7 @@ def answer_question(question: str, org_id: str) -> dict:
             return {
                 "answer": "Modo mock ativo: não encontrei nenhum documento relacionado à pergunta.",
                 "sources": [],
+                "answered": False,
             }
 
         first_chunk = chunks[0]
@@ -245,6 +246,7 @@ def answer_question(question: str, org_id: str) -> dict:
                 "Fonte: [Fonte 1]"
             ),
             "sources": build_sources(chunks, org_id),
+            "answered": True,
         }
 
     system_prompt = """
@@ -276,7 +278,14 @@ Contexto recuperado:
         temperature=0.1,
     )
 
+    answer_text = response.choices[0].message.content
+
+    # Considera "sem resposta" quando não há contexto ou o modelo usou o fallback
+    fallback = "não encontrei essa informação nos guias disponíveis"
+    answered = bool(chunks) and fallback not in (answer_text or "").lower()
+
     return {
-        "answer": response.choices[0].message.content,
+        "answer": answer_text,
         "sources": build_sources(chunks, org_id),
+        "answered": answered,
     }

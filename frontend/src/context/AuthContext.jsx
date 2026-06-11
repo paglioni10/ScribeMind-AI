@@ -65,10 +65,21 @@ export function AuthProvider({ children }) {
 
   const isAdmin = user?.role === "admin" || user?.role === "owner";
   const isOwner = user?.role === "owner";
+  const canViewDashboard = !!user?.can_view_dashboard;
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, refreshUser: loadMe, isAdmin, isOwner }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        refreshUser: loadMe,
+        isAdmin,
+        isOwner,
+        canViewDashboard,
+      }}
     >
       {children}
     </AuthContext.Provider>

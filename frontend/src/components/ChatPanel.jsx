@@ -136,7 +136,7 @@ export function ChatPanel({
     <section
       id="main-chat"
       aria-label="Chat com documentos"
-      className="flex min-h-[720px] flex-col rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg"
+      className="flex h-[calc(100vh-9rem)] min-h-[480px] flex-col rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg lg:sticky lg:top-4"
     >
       <div className="mb-4 flex items-start justify-between gap-3 border-b border-slate-800 pb-4">
         <div>

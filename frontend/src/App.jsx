@@ -8,6 +8,10 @@ import { DocumentUpload } from "./components/DocumentUpload";
 import { DocumentList } from "./components/DocumentList";
 import { ImageGallery } from "./components/ImageGallery";
 import { MembersPanel } from "./components/MembersPanel";
+import { ConversationSidebar } from "./components/ConversationSidebar";
+import { Dashboard } from "./components/Dashboard";
+import { AccessRequestButton } from "./components/AccessRequestButton";
+import { DashboardRequestsBanner } from "./components/DashboardRequestsBanner";
 import { VLibras } from "./components/VLibras";
 import { AuthScreen } from "./components/auth/AuthScreen";
 import { apiFetch } from "./lib/api";
@@ -21,8 +25,8 @@ const INITIAL_MESSAGES = [
   },
 ];
 
-function TopBar() {
-  const { user, logout } = useAuth();
+function TopBar({ view, setView }) {
+  const { user, logout, canViewDashboard } = useAuth();
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
       <div className="flex items-center gap-3">
@@ -32,6 +36,34 @@ function TopBar() {
             {user.organization.name}
           </span>
         )}
+        {canViewDashboard && (
+          <nav className="flex gap-1" aria-label="Navegação principal">
+            <button
+              onClick={() => setView("chat")}
+              aria-current={view === "chat" ? "page" : undefined}
+              className={`rounded-lg px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                view === "chat"
+                  ? "bg-cyan-500 text-slate-950"
+                  : "border border-slate-700 text-slate-300 hover:border-cyan-400"
+              }`}
+            >
+              Chat
+            </button>
+            <button
+              onClick={() => setView("dashboard")}
+              aria-current={view === "dashboard" ? "page" : undefined}
+              className={`rounded-lg px-3 py-1 text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+                view === "dashboard"
+                  ? "bg-cyan-500 text-slate-950"
+                  : "border border-slate-700 text-slate-300 hover:border-cyan-400"
+              }`}
+            >
+              Dashboard
+            </button>
+          </nav>
+        )}
+
+        {!canViewDashboard && <AccessRequestButton />}
       </div>
       <div className="flex items-center gap-3">
         <div className="text-right">
@@ -58,7 +90,7 @@ function TopBar() {
 }
 
 function AppContent() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, canViewDashboard } = useAuth();
 
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [question, setQuestion] = useState("");
@@ -72,6 +104,11 @@ function AppContent() {
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState(null);
+  const [reprocessingId, setReprocessingId] = useState(null);
+
+  const [conversations, setConversations] = useState([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [activeConversationId, setActiveConversationId] = useState(null);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [documentImages, setDocumentImages] = useState([]);
@@ -79,10 +116,100 @@ function AppContent() {
 
   const [vlibrasEnabled, setVlibrasEnabled] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [view, setView] = useState("chat");
 
   useEffect(() => {
     loadDocuments();
+    loadConversations();
   }, []);
+
+  async function loadConversations() {
+    setConversationsLoading(true);
+    try {
+      const response = await apiFetch("/conversations/");
+      const data = await response.json();
+      if (response.ok) setConversations(data.conversations || []);
+    } catch {
+      // estado vazio comunica a falha
+    } finally {
+      setConversationsLoading(false);
+    }
+  }
+
+  async function selectConversation(conversationId) {
+    try {
+      const response = await apiFetch(`/conversations/${conversationId}`);
+      const data = await response.json();
+      if (!response.ok) {
+        alert("Erro ao carregar a conversa.");
+        return;
+      }
+      const loaded = (data.messages || []).map((m) => ({
+        role: m.role,
+        content: m.content,
+        sources: m.sources || [],
+      }));
+      setMessages(loaded.length ? loaded : INITIAL_MESSAGES);
+      setActiveConversationId(conversationId);
+    } catch {
+      alert("Erro ao conectar com o backend.");
+    }
+  }
+
+  function newChat() {
+    setActiveConversationId(null);
+    setMessages(INITIAL_MESSAGES);
+    setQuestion("");
+  }
+
+  async function deleteConversation(conversationId) {
+    if (!window.confirm("Excluir esta conversa?")) return;
+    try {
+      const response = await apiFetch(`/conversations/${conversationId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        alert("Erro ao excluir a conversa.");
+        return;
+      }
+      if (activeConversationId === conversationId) newChat();
+      await loadConversations();
+    } catch {
+      alert("Erro ao conectar com o backend.");
+    }
+  }
+
+  async function reprocessDocument(documentId) {
+    if (
+      !window.confirm(
+        "Reprocessar este documento? Isso re-gera embeddings e descrições de imagem (pode consumir API da OpenAI)."
+      )
+    )
+      return;
+
+    setReprocessingId(documentId);
+    try {
+      const response = await apiFetch(`/documents/${documentId}/reprocess`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.detail || "Erro ao reprocessar documento.");
+        return;
+      }
+      alert(
+        `Reprocessado: ${data.images_reprocessed} imagem(ns) e ${data.text_chunks_reembedded} chunk(s) de texto.`
+      );
+      if (selectedDocument?.id === documentId) {
+        await loadDocumentImages(selectedDocument);
+      }
+      await loadDocuments();
+    } catch {
+      alert("Erro ao conectar com o backend.");
+    } finally {
+      setReprocessingId(null);
+    }
+  }
 
   async function loadDocuments() {
     setDocumentsLoading(true);
@@ -155,7 +282,10 @@ function AppContent() {
     try {
       const response = await apiFetch("/chat/", {
         method: "POST",
-        body: { question: currentQuestion },
+        body: {
+          question: currentQuestion,
+          conversation_id: activeConversationId,
+        },
       });
       const data = await response.json();
       if (!response.ok) {
@@ -173,6 +303,11 @@ function AppContent() {
         ...m,
         { role: "assistant", content: data.answer, sources: data.sources || [] },
       ]);
+
+      // Conversa nova → fixa o id e atualiza a sidebar
+      const isNewConversation = activeConversationId !== data.conversation_id;
+      setActiveConversationId(data.conversation_id);
+      if (isNewConversation) loadConversations();
     } catch {
       setMessages((m) => [
         ...m,
@@ -231,7 +366,9 @@ function AppContent() {
         Pular para o chat
       </a>
 
-      <TopBar />
+      <TopBar view={view} setView={setView} />
+
+      {isAdmin && <DashboardRequestsBanner />}
 
       <AccessibilityBar
         vlibrasEnabled={vlibrasEnabled}
@@ -240,11 +377,25 @@ function AppContent() {
 
       <VLibras enabled={vlibrasEnabled} />
 
-      <main
-        className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[380px_1fr]"
-        role="main"
-      >
-        <aside aria-label="Painel de gerenciamento" className="space-y-4">
+      {view === "dashboard" && canViewDashboard ? (
+        <main className="mx-auto max-w-7xl px-4 py-6" role="main">
+          <Dashboard />
+        </main>
+      ) : (
+        <main
+          className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[380px_1fr]"
+          role="main"
+        >
+          <aside aria-label="Painel de gerenciamento" className="space-y-4">
+          <ConversationSidebar
+            conversations={conversations}
+            loading={conversationsLoading}
+            activeConversationId={activeConversationId}
+            onSelect={selectConversation}
+            onNew={newChat}
+            onDelete={deleteConversation}
+          />
+
           <DocumentUpload
             uploadTitle={uploadTitle}
             setUploadTitle={setUploadTitle}
@@ -259,9 +410,12 @@ function AppContent() {
             documents={documents}
             documentsLoading={documentsLoading}
             deletingDocumentId={deletingDocumentId}
+            reprocessingId={reprocessingId}
             selectedDocument={selectedDocument}
+            isAdmin={isAdmin}
             onRefresh={loadDocuments}
             onDelete={deleteDocument}
+            onReprocess={reprocessDocument}
             onViewImages={loadDocumentImages}
           />
 
@@ -295,12 +449,10 @@ function AppContent() {
           setQuestion={setQuestion}
           loading={loading}
           sendMessage={sendMessage}
-          clearChat={() => {
-            setMessages(INITIAL_MESSAGES);
-            setQuestion("");
-          }}
+          clearChat={newChat}
         />
-      </main>
+        </main>
+      )}
     </div>
   );
 }

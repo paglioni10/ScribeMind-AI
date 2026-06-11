@@ -190,5 +190,7 @@ def me(user: CurrentUser = Depends(get_current_user)):
         "email": user.email,
         "full_name": profile_data.get("full_name"),
         "role": user.role,
+        "dashboard_access": user.dashboard_access,
+        "can_view_dashboard": user.can_view_dashboard,
         "organization": org_data,
     }

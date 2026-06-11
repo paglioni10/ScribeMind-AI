@@ -8,6 +8,7 @@ from app.services.document_ingestion_service import ingest_text_document
 from app.services.document_image_service import save_document_images
 from app.services.pdf_image_service import extract_images_from_pdf
 from app.services.pdf_service import extract_text_from_pdf
+from app.services.reprocess_service import reprocess_document
 
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -36,7 +37,45 @@ def list_documents(user: CurrentUser = Depends(get_current_user)):
         .execute()
     )
 
-    return {"documents": response.data or []}
+    documents = response.data or []
+
+    # Metadados: contagem de chunks (texto vs visual) e imagens por documento.
+    chunks = (
+        supabase.table("chunks")
+        .select("document_id, image_id")
+        .eq("organization_id", user.organization_id)
+        .execute()
+    )
+    images = (
+        supabase.table("document_images")
+        .select("document_id")
+        .eq("organization_id", user.organization_id)
+        .execute()
+    )
+
+    chunk_counts: dict[str, int] = {}
+    visual_chunk_counts: dict[str, int] = {}
+    for chunk in chunks.data or []:
+        doc_id = chunk.get("document_id")
+        if not doc_id:
+            continue
+        chunk_counts[doc_id] = chunk_counts.get(doc_id, 0) + 1
+        if chunk.get("image_id"):
+            visual_chunk_counts[doc_id] = visual_chunk_counts.get(doc_id, 0) + 1
+
+    image_counts: dict[str, int] = {}
+    for image in images.data or []:
+        doc_id = image.get("document_id")
+        if doc_id:
+            image_counts[doc_id] = image_counts.get(doc_id, 0) + 1
+
+    for document in documents:
+        doc_id = document["id"]
+        document["chunk_count"] = chunk_counts.get(doc_id, 0)
+        document["visual_chunk_count"] = visual_chunk_counts.get(doc_id, 0)
+        document["image_count"] = image_counts.get(doc_id, 0)
+
+    return {"documents": documents}
 
 
 @router.post("/upload")
@@ -143,6 +182,23 @@ def delete_document(
         "message": "Documento excluído com sucesso.",
         "document_id": document_id,
         "deleted": response.data or [],
+    }
+
+
+@router.post("/{document_id}/reprocess")
+def reprocess(
+    document_id: str,
+    user: CurrentUser = Depends(require_role("admin")),
+):
+    result = reprocess_document(document_id, user.organization_id)
+
+    if result.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail="Documento não encontrado.")
+
+    return {
+        "message": "Documento reprocessado com sucesso.",
+        "document_id": document_id,
+        **result,
     }
 
 
