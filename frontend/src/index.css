@@ -4,6 +4,54 @@
 html[data-font-size="large"]  { font-size: 112.5%; }
 html[data-font-size="xlarge"] { font-size: 125%; }
 
+/* ─── Modo claro ──────────────────────────────────────────────── */
+/* Remapeia as classes slate (tema escuro) para superfícies claras,
+   sem precisar reescrever os componentes. */
+html.light:not(.high-contrast) body { background-color: #f8fafc; color: #0f172a; }
+
+html.light:not(.high-contrast) .bg-slate-950 { background-color: #f1f5f9 !important; }
+html.light:not(.high-contrast) .bg-slate-900 { background-color: #ffffff !important; }
+html.light:not(.high-contrast) .bg-slate-800 { background-color: #e2e8f0 !important; }
+html.light:not(.high-contrast) .bg-slate-950\/60 { background-color: #e2e8f0 !important; }
+html.light:not(.high-contrast) .bg-slate-950\/40 { background-color: #eef2f6 !important; }
+
+html.light:not(.high-contrast) .text-white,
+html.light:not(.high-contrast) .text-slate-100,
+html.light:not(.high-contrast) .text-slate-200 { color: #0f172a !important; }
+html.light:not(.high-contrast) .text-slate-300 { color: #334155 !important; }
+html.light:not(.high-contrast) .text-slate-400 { color: #475569 !important; }
+html.light:not(.high-contrast) .text-slate-500 { color: #64748b !important; }
+html.light:not(.high-contrast) .text-cyan-400 { color: #0891b2 !important; }
+
+html.light:not(.high-contrast) .border-slate-800 { border-color: #e2e8f0 !important; }
+html.light:not(.high-contrast) .border-slate-700,
+html.light:not(.high-contrast) .border-slate-600 { border-color: #cbd5e1 !important; }
+
+/* Grade do gráfico do dashboard */
+html.light:not(.high-contrast) .border-slate-800\/70 { border-color: #e2e8f0 !important; }
+html.light:not(.high-contrast) .bg-slate-700 { background-color: #cbd5e1 !important; }
+
+/* Badges e botões coloridos — contraste no modo claro
+   (fundos claros sólidos + texto escuro da mesma família) */
+html.light:not(.high-contrast) .bg-purple-900\/40,
+html.light:not(.high-contrast) .bg-purple-900\/50 { background-color: #f3e8ff !important; }
+html.light:not(.high-contrast) .text-purple-300 { color: #7e22ce !important; }
+
+html.light:not(.high-contrast) .bg-emerald-900\/60 { background-color: #d1fae5 !important; }
+html.light:not(.high-contrast) .text-emerald-300 { color: #047857 !important; }
+html.light:not(.high-contrast) .border-emerald-700 { border-color: #059669 !important; }
+
+html.light:not(.high-contrast) .bg-amber-900\/60 { background-color: #fef3c7 !important; }
+html.light:not(.high-contrast) .text-amber-300 { color: #b45309 !important; }
+html.light:not(.high-contrast) .border-amber-900\/70 { border-color: #d97706 !important; }
+
+html.light:not(.high-contrast) .text-red-300 { color: #b91c1c !important; }
+html.light:not(.high-contrast) .border-red-900\/70 { border-color: #f87171 !important; }
+
+html.light:not(.high-contrast) .bg-cyan-900\/40,
+html.light:not(.high-contrast) .bg-cyan-900\/50 { background-color: #cffafe !important; }
+html.light:not(.high-contrast) .text-cyan-300 { color: #0e7490 !important; }
+
 /* ─── Foco visível global (fallback para elementos sem Tailwind) ─ */
 *:focus-visible {
   outline: 2px solid #22d3ee;
@@ -13,6 +61,25 @@ html[data-font-size="xlarge"] { font-size: 125%; }
 /* Remove outline padrão apenas quando focus-visible está disponível */
 *:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* ─── Interação universal nos botões ──────────────────────────────
+   Hover: realce de overlay (mostra onde o mouse está).
+   Active: leve "afundar" (confirma o clique). Funciona em botões
+   sólidos e de contorno, sem conflitar com o background de cada um. */
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  transition: transform 0.08s ease, box-shadow 0.15s ease,
+    border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+button:not(:disabled):hover,
+[role="button"]:not(:disabled):hover {
+  box-shadow: inset 0 0 0 999px rgba(34, 211, 238, 0.12);
+}
+button:not(:disabled):active,
+[role="button"]:not(:disabled):active {
+  transform: scale(0.96);
+  box-shadow: inset 0 0 0 999px rgba(34, 211, 238, 0.2);
 }
 
 /* ─── Alto contraste ──────────────────────────────────────────── */
@@ -45,6 +112,7 @@ html.high-contrast .border-cyan-500  { border-color: var(--hc-accent) !important
 
 /* Texto */
 html.high-contrast .text-slate-100,
+html.high-contrast .text-slate-200,
 html.high-contrast .text-white         { color: var(--hc-text)   !important; }
 html.high-contrast .text-slate-300     { color: var(--hc-text)   !important; }
 html.high-contrast .text-slate-400,

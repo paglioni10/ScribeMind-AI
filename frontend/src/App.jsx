@@ -12,6 +12,7 @@ import { ConversationSidebar } from "./components/ConversationSidebar";
 import { Dashboard } from "./components/Dashboard";
 import { AccessRequestButton } from "./components/AccessRequestButton";
 import { DashboardRequestsBanner } from "./components/DashboardRequestsBanner";
+import { Logo } from "./components/Logo";
 import { VLibras } from "./components/VLibras";
 import { AuthScreen } from "./components/auth/AuthScreen";
 import { apiFetch } from "./lib/api";
@@ -30,7 +31,7 @@ function TopBar({ view, setView }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
       <div className="flex items-center gap-3">
-        <span className="text-sm font-bold text-cyan-400">ScribeMind AI</span>
+        <Logo className="h-7 w-auto" />
         {user?.organization?.name && (
           <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
             {user.organization.name}

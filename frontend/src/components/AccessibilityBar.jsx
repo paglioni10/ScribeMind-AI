@@ -7,7 +7,7 @@ const FONT_SIZES = [
 ];
 
 export function AccessibilityBar({ vlibrasEnabled, onToggleVlibras }) {
-  const { highContrast, setHighContrast, fontSize, setFontSize } =
+  const { highContrast, setHighContrast, fontSize, setFontSize, theme, setTheme } =
     useAccessibility();
 
   return (
@@ -22,6 +22,18 @@ export function AccessibilityBar({ vlibrasEnabled, onToggleVlibras }) {
       >
         Acessibilidade:
       </span>
+
+      {/* Tema claro/escuro */}
+      <button
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        aria-pressed={theme === "light"}
+        aria-label={
+          theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"
+        }
+        className="rounded border border-slate-700 px-3 py-1 text-xs text-slate-300 transition hover:border-cyan-400 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        {theme === "dark" ? "Modo claro" : "Modo escuro"}
+      </button>
 
       {/* Alto contraste */}
       <button

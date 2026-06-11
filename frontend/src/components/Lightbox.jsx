@@ -37,7 +37,7 @@ export function Lightbox({ src, alt, onClose }) {
         ref={closeRef}
         onClick={onClose}
         aria-label="Fechar imagem (Escape)"
-        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-600 bg-slate-900/80 text-lg text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-[#475569] bg-[#0f172acc] text-lg text-[#e2e8f0] transition hover:border-cyan-400 hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
         ✕
       </button>
@@ -52,7 +52,7 @@ export function Lightbox({ src, alt, onClose }) {
           className="max-h-[80vh] w-auto rounded-xl object-contain shadow-2xl"
         />
         {alt && (
-          <figcaption className="max-w-2xl text-center text-xs text-slate-400">
+          <figcaption className="max-w-2xl text-center text-xs text-[#94a3b8]">
             {alt}
           </figcaption>
         )}
@@ -61,7 +61,7 @@ export function Lightbox({ src, alt, onClose }) {
           target="_blank"
           rel="noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="text-[11px] text-cyan-400 underline hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          className="text-[11px] text-[#22d3ee] underline hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
           Abrir original em nova aba
         </a>

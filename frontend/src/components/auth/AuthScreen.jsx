@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { Logo } from "../Logo";
 
 export function AuthScreen() {
   const { login, register } = useAuth();
@@ -58,8 +59,8 @@ export function AuthScreen() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <p className="text-sm text-cyan-400">ScribeMind AI</p>
-          <h1 className="mt-1 text-2xl font-bold">
+          <Logo className="mx-auto h-9 w-auto" />
+          <h1 className="mt-3 text-2xl font-bold">
             {mode === "login" ? "Entrar na sua conta" : "Criar conta"}
           </h1>
           <p className="mt-2 text-sm text-slate-400">

@@ -9,6 +9,9 @@ export function AccessibilityProvider({ children }) {
   const [fontSize, setFontSize] = useState(
     () => localStorage.getItem("sm_fs") || "normal"
   );
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("sm_theme") || "dark"
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle("high-contrast", highContrast);
@@ -20,9 +23,14 @@ export function AccessibilityProvider({ children }) {
     localStorage.setItem("sm_fs", fontSize);
   }, [fontSize]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle("light", theme === "light");
+    localStorage.setItem("sm_theme", theme);
+  }, [theme]);
+
   return (
     <AccessibilityContext.Provider
-      value={{ highContrast, setHighContrast, fontSize, setFontSize }}
+      value={{ highContrast, setHighContrast, fontSize, setFontSize, theme, setTheme }}
     >
       {children}
     </AccessibilityContext.Provider>
