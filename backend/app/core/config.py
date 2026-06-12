@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     default_organization_id: str = ""
     use_mock_ai: bool = False
 
+    # Governança: limite de tamanho de upload (MB)
+    max_upload_mb: int = 10
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

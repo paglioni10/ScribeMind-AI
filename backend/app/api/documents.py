@@ -2,6 +2,7 @@ import unicodedata
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
+from app.core.config import settings
 from app.db.supabase_client import get_supabase_client
 from app.services.auth_service import CurrentUser, get_current_user, require_role
 from app.services.document_ingestion_service import ingest_text_document
@@ -9,6 +10,7 @@ from app.services.document_image_service import save_document_images
 from app.services.pdf_image_service import extract_images_from_pdf
 from app.services.pdf_service import extract_text_from_pdf
 from app.services.reprocess_service import reprocess_document
+from app.services.audit_service import record_audit
 
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
@@ -119,11 +121,29 @@ async def upload_document(
 
     raw_content = await file.read()
 
+    if not raw_content:
+        raise HTTPException(status_code=400, detail="O arquivo enviado está vazio.")
+
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    if len(raw_content) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"Arquivo muito grande. O limite é {settings.max_upload_mb} MB."
+            ),
+        )
+
     if file.filename.endswith(".pdf"):
         content = extract_text_from_pdf(raw_content)
         source_type = "pdf"
     else:
-        content = raw_content.decode("utf-8")
+        try:
+            content = raw_content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Não foi possível ler o arquivo (esperado texto UTF-8).",
+            )
         source_type = "upload"
 
     if not content.strip():
@@ -153,6 +173,20 @@ async def upload_document(
                 organization_id=user.organization_id,
             )
 
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="document.upload",
+        entity_type="document",
+        entity_id=result["document_id"],
+        metadata={
+            "title": clean_title,
+            "filename": file.filename,
+            "chunks": result.get("chunks_created"),
+            "images": len(images_saved),
+        },
+    )
+
     return {
         "message": "Documento indexado com sucesso.",
         "filename": file.filename,
@@ -178,10 +212,22 @@ def delete_document(
         .execute()
     )
 
+    deleted = response.data or []
+    title = deleted[0].get("title") if deleted else None
+
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="document.delete",
+        entity_type="document",
+        entity_id=document_id,
+        metadata={"title": title},
+    )
+
     return {
         "message": "Documento excluído com sucesso.",
         "document_id": document_id,
-        "deleted": response.data or [],
+        "deleted": deleted,
     }
 
 
@@ -194,6 +240,15 @@ def reprocess(
 
     if result.get("error") == "not_found":
         raise HTTPException(status_code=404, detail="Documento não encontrado.")
+
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="document.reprocess",
+        entity_type="document",
+        entity_id=document_id,
+        metadata=result,
+    )
 
     return {
         "message": "Documento reprocessado com sucesso.",

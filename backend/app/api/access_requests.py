@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.db.supabase_client import get_supabase_client
 from app.services.auth_service import CurrentUser, get_current_user, require_role
+from app.services.audit_service import record_audit
 
 
 router = APIRouter(prefix="/access-requests", tags=["Access Requests"])
@@ -61,6 +62,15 @@ def create_request(user: CurrentUser = Depends(get_current_user)):
         )
         .execute()
     )
+
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="access_request.created",
+        entity_type="access_request",
+        entity_id=created.data[0]["id"],
+    )
+
     return {"message": "Pedido enviado.", "request": created.data[0]}
 
 
@@ -136,6 +146,15 @@ def approve_request(
         }
     ).eq("id", request_id).execute()
 
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="access_request.approved",
+        entity_type="access_request",
+        entity_id=request_id,
+        metadata={"target_user_id": req["user_id"]},
+    )
+
     return {"message": "Acesso ao dashboard concedido.", "request_id": request_id}
 
 
@@ -156,5 +175,14 @@ def deny_request(
             "resolved_by": user.user_id,
         }
     ).eq("id", request_id).execute()
+
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="access_request.denied",
+        entity_type="access_request",
+        entity_id=request_id,
+        metadata={"target_user_id": req["user_id"]},
+    )
 
     return {"message": "Pedido recusado.", "request_id": request_id}

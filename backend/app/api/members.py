@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.db.supabase_client import get_supabase_client
 from app.services.auth_service import CurrentUser, get_current_user, require_role
+from app.services.audit_service import record_audit
 
 
 router = APIRouter(prefix="/members", tags=["Members"])
@@ -91,6 +92,19 @@ def update_member_role(
         .execute()
     )
 
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="member.role_changed",
+        entity_type="member",
+        entity_id=member_id,
+        metadata={
+            "target_user_id": member["user_id"],
+            "from": member["role"],
+            "to": request.role,
+        },
+    )
+
     return {"message": "Papel atualizado.", "member": updated.data[0]}
 
 
@@ -123,5 +137,14 @@ def remove_member(
     supabase.table("organization_members").delete().eq("id", member_id).eq(
         "organization_id", user.organization_id
     ).execute()
+
+    record_audit(
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        action="member.removed",
+        entity_type="member",
+        entity_id=member_id,
+        metadata={"removed_user_id": member["user_id"], "role": member["role"]},
+    )
 
     return {"message": "Membro removido.", "member_id": member_id}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiJson } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import { AuditLog } from "./AuditLog";
 
 function MetricCard({ label, value, hint, accent = "text-cyan-400" }) {
   return (
@@ -90,6 +92,7 @@ function QuestionsChart({ data }) {
 }
 
 export function Dashboard() {
+  const { isAdmin } = useAuth();
   const [metrics, setMetrics] = useState(null);
   const [unanswered, setUnanswered] = useState([]);
   const [gaps, setGaps] = useState([]);
@@ -256,6 +259,8 @@ export function Dashboard() {
           </ul>
         </section>
       </div>
+
+      {isAdmin && <AuditLog />}
     </div>
   );
 }

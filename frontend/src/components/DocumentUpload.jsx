@@ -20,7 +20,8 @@ export function DocumentUpload({
         Enviar documento
       </p>
       <p className="mt-1 text-xs text-slate-400">
-        Envie arquivos .md, .txt ou .pdf para indexar no motor de conhecimento.
+        Envie arquivos .md, .txt ou .pdf (até 10 MB) para indexar no motor de
+        conhecimento.
       </p>
 
       <div className="mt-4 space-y-3">

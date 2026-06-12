@@ -66,6 +66,15 @@ O ScribeMind AI busca transformar essa documentação passiva em um assistente a
 - Dashboard de perguntas sem resposta (o que os usuários perguntaram e o bot não soube responder)
 - Identificação de lacunas na base: termos mais frequentes nas perguntas sem resposta
 
+### Governança e segurança
+- Histórico de auditoria: registra ações sensíveis (upload, exclusão,
+  reprocessamento, mudança de papel, aprovação de acesso) com autor, alvo e data
+- Painel de auditoria restrito a admin/owner (mais estrito que o dashboard)
+- Validação de upload: limite de tamanho (configurável), bloqueio de arquivo
+  vazio e de conteúdo não-UTF-8
+- Row Level Security (RLS) no banco como defesa em profundidade: cada usuário
+  só acessa os dados da própria organização, mesmo em caso de vazamento de chave
+
 ### Acessibilidade (WCAG 2.2 / ARIA)
 - Descrições das imagens usadas como `alt text` e legendas acessíveis
 - Text-to-Speech: botão "Ouvir resposta" no chat
@@ -138,6 +147,7 @@ EMBEDDING_DIM=768
 ENVIRONMENT=development
 DEFAULT_ORGANIZATION_ID=      # fallback/seed; o org_id real vem do usuário
 USE_MOCK_AI=true              # true = não chama a IA (mock, sem gastar cota)
+MAX_UPLOAD_MB=10             # limite de tamanho de upload
 ```
 
 > **Providers alternativos:** para **OpenAI**, use `AI_BASE_URL=https://api.openai.com/v1`,
@@ -156,6 +166,8 @@ USE_MOCK_AI=true              # true = não chama a IA (mock, sem gastar cota)
    - `migration_dashboard_access.sql`
    - `migration_gemini_embeddings.sql` (ajusta a dimensão dos embeddings para 768;
      se já tinha documentos indexados, use o botão **Reprocessar** depois para re-gerar)
+   - `migration_audit.sql` (histórico de auditoria)
+   - `migration_rls.sql` (Row Level Security — pode escolher "Run and enable RLS")
 
    Ao avisar sobre RLS, escolha **Run without RLS** (a autorização é feita na camada
    da aplicação).
@@ -184,6 +196,7 @@ scribemind_ai/
 │   │   ├── api/
 │   │   │   ├── access_requests.py
 │   │   │   ├── analytics.py
+│   │   │   ├── audit.py
 │   │   │   ├── auth.py
 │   │   │   ├── chat.py
 │   │   │   ├── conversations.py
@@ -197,6 +210,7 @@ scribemind_ai/
 │   │   ├── services/
 │   │   │   ├── ai_client.py
 │   │   │   ├── analytics_service.py
+│   │   │   ├── audit_service.py
 │   │   │   ├── auth_service.py
 │   │   │   ├── conversation_service.py
 │   │   │   ├── document_image_service.py
@@ -225,6 +239,7 @@ scribemind_ai/
 │   │   │   │   └── AuthScreen.jsx
 │   │   │   ├── AccessibilityBar.jsx
 │   │   │   ├── AccessRequestButton.jsx
+│   │   │   ├── AuditLog.jsx
 │   │   │   ├── ChatPanel.jsx
 │   │   │   ├── ConversationSidebar.jsx
 │   │   │   ├── Dashboard.jsx
@@ -232,6 +247,8 @@ scribemind_ai/
 │   │   │   ├── DocumentList.jsx
 │   │   │   ├── DocumentUpload.jsx
 │   │   │   ├── ImageGallery.jsx
+│   │   │   ├── Lightbox.jsx
+│   │   │   ├── Logo.jsx
 │   │   │   ├── MembersPanel.jsx
 │   │   │   └── VLibras.jsx
 │   │   ├── context/
@@ -275,6 +292,7 @@ scribemind_ai/
 | GET | `/analytics/metrics` | dashboard | Métricas de uso |
 | GET | `/analytics/unanswered` | dashboard | Perguntas sem resposta |
 | GET | `/analytics/gaps` | dashboard | Lacunas na base de conhecimento |
+| GET | `/audit/` | admin/owner | Histórico de auditoria da organização |
 | GET | `/access-requests/mine` | autenticado | Status do próprio pedido de acesso |
 | POST | `/access-requests/` | membro | Solicita acesso ao dashboard |
 | GET | `/access-requests/` | admin/owner | Lista pedidos pendentes |

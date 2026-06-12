@@ -9,6 +9,7 @@ from app.api.members import router as members_router
 from app.api.conversations import router as conversations_router
 from app.api.analytics import router as analytics_router
 from app.api.access_requests import router as access_requests_router
+from app.api.audit import router as audit_router
 
 
 app = FastAPI(
@@ -31,6 +32,7 @@ app.include_router(members_router)
 app.include_router(conversations_router)
 app.include_router(analytics_router)
 app.include_router(access_requests_router)
+app.include_router(audit_router)
 app.include_router(chat_router)
 app.include_router(documents_router)
 
