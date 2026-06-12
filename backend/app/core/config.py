@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Governança: limite de tamanho de upload (MB)
     max_upload_mb: int = 10
 
+    # CORS: "*" libera tudo, ou lista separada por vírgula com os domínios do frontend
+    cors_origins: str = "*"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property

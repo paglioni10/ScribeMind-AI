@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.api.health import router as health_router
 from app.api.chat import router as chat_router
 from app.api.documents import router as documents_router
@@ -18,10 +19,17 @@ app = FastAPI(
     version="0.1.0",
 )
 
+cors_origins = (
+    ["*"]
+    if settings.cors_origins.strip() == "*"
+    else [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    # Autenticação é via Bearer token (header), não cookies — credentials desnecessário
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
