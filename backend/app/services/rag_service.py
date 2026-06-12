@@ -130,6 +130,14 @@ def search_relevant_chunks(
                 if "image_id" not in chunk:
                     chunk["image_id"] = image_id_map.get(chunk["id"])
 
+    # Piso de relevância: descarta chunks pouco relacionados, para não citar
+    # documentos irrelevantes como fonte.
+    chunks = [
+        chunk
+        for chunk in chunks
+        if (chunk.get("similarity") or 0) >= settings.match_threshold
+    ]
+
     return chunks
 
 

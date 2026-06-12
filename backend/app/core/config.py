@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # CORS: "*" libera tudo, ou lista separada por vírgula com os domínios do frontend
     cors_origins: str = "*"
 
+    # RAG: piso de similaridade — chunks abaixo disso não entram como contexto/fonte
+    # (evita citar documentos irrelevantes). Calibrado para o Gemini embedding-001.
+    match_threshold: float = 0.64
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
