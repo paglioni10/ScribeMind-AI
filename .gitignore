@@ -21,6 +21,9 @@ frontend/dist/
 
 # Documentos de teste / uploads locais
 backend/documents/
+# ...exceto os exemplos de demonstração versionados
+!backend/documents/demo/
+!backend/documents/demo/**
 
 # Sistema / Editor
 .DS_Store
