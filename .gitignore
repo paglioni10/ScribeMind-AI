@@ -19,11 +19,9 @@ frontend/node_modules/
 dist/
 frontend/dist/
 
-# Documentos de teste / uploads locais
-backend/documents/
-# ...exceto os exemplos de demonstração versionados
+# Documentos de teste / uploads locais (exceto a pasta de exemplos demo/)
+backend/documents/*
 !backend/documents/demo/
-!backend/documents/demo/**
 
 # Sistema / Editor
 .DS_Store
