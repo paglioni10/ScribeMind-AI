@@ -1,142 +1,137 @@
 # ScribeMind AI
 
-ScribeMind AI é um Knowledge Engine corporativo com foco em automação de processos, IA generativa, RAG multimodal e treinamento corporativo.
+**Transforma documentação corporativa passiva (PDFs, manuais, guias visuais) em um assistente de chat ativo, que responde com base nas fontes oficiais da empresa — interpretando inclusive as _imagens_ dos documentos.**
 
-A proposta é transformar documentos internos, guias operacionais, manuais e guias visuais em uma interface de chat consultável, permitindo que colaboradores encontrem respostas com base nas fontes oficiais da empresa — inclusive interpretando as **imagens** dos documentos.
+[![Demo ao vivo](https://img.shields.io/badge/▶_Demo_ao_vivo-22d3ee?style=for-the-badge&logoColor=white)](https://scribemind-ai-alpha.vercel.app)
+&nbsp;
+![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black)
+![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?logo=supabase&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?logo=googlegemini&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-RAG-4169E1)
 
-O projeto nasceu com foco em guias do tipo Scribe/ScribeHow, onde processos são documentados com texto, prints de tela e passo a passo visual.
+> 🔗 **Aplicação no ar:** https://scribemind-ai-alpha.vercel.app
+> Crie uma conta em segundos (sem confirmação de e-mail), suba um documento e pergunte.
 
-## Objetivo
+---
 
-Empresas costumam armazenar processos em PDFs, manuais, pastas internas ou ferramentas de documentação visual. Com o tempo, esses materiais viram arquivos pouco consultados, difíceis de encontrar e dependentes de pessoas mais experientes para interpretação.
+## O problema → a solução
 
-O ScribeMind AI busca transformar essa documentação passiva em um assistente ativo, capaz de:
+Empresas guardam seus processos em PDFs, manuais e ferramentas de documentação visual (tipo Scribe/ScribeHow, cheias de prints anotados). Com o tempo esses materiais viram arquivos pouco consultados, difíceis de encontrar e **dependentes de pessoas-chave** para interpretação.
 
-- receber documentos;
-- indexar conteúdos (texto e imagens);
-- recuperar trechos relevantes;
-- responder perguntas em linguagem natural;
-- mostrar fontes;
-- descrever e associar imagens extraídas de PDFs às respostas;
-- atender múltiplos usuários e organizações com controle de acesso;
-- oferecer acessibilidade completa (visual, auditiva, por voz e em Libras).
+O **ScribeMind AI** transforma essa documentação em um assistente que:
+
+- entende **texto e imagens** dos documentos (RAG multimodal);
+- responde em linguagem natural **citando a fonte**;
+- mede a **adoção** e identifica **lacunas** na base de conhecimento;
+- atende **múltiplas organizações** com governança e controle de acesso;
+- é **acessível** (leitor de tela, voz, Libras, alto contraste).
+
+É documentação que deixa de ser arquivo morto e vira **conhecimento operacional consultável** — reduzindo tempo de busca e dependência de especialistas. Exatamente a proposta da transformação digital.
+
+---
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+    User([Usuário]) --> FE["Frontend<br/>React + Vite<br/>(Vercel)"]
+    FE -->|"REST + JWT (Bearer)"| API["Backend<br/>FastAPI<br/>(Render)"]
+    API --> Auth["Supabase Auth"]
+    API --> DB[("Postgres + pgvector<br/>(Supabase)")]
+    API --> ST[("Storage<br/>imagens dos PDFs")]
+    API -->|"chat · embeddings · visão"| AI["Google Gemini<br/>(API compatível c/ OpenAI)"]
+```
+
+### Fluxo de indexação e resposta (RAG multimodal)
+
+```mermaid
+flowchart TD
+    UP["Upload .pdf / .md / .txt"] --> TX["Extrai texto"]
+    UP --> IMG["Extrai imagens do PDF"]
+    TX --> CK["Divide em chunks + embeddings"]
+    IMG --> VIS["Gemini Vision descreve cada tela"]
+    VIS --> VCK["Chunk visual + embedding"]
+    CK --> VEC[("pgvector")]
+    VCK --> VEC
+    Q["Pergunta do usuário"] --> SR["Busca por similaridade"]
+    VEC --> SR
+    SR --> LLM["Gemini gera resposta<br/>texto + descrição das telas"]
+    LLM --> ANS["Resposta com fontes<br/>e imagens relacionadas"]
+```
+
+---
+
+## Destaques de engenharia
+
+- **RAG multimodal:** combina o texto do documento com a **descrição por IA das telas** (Gemini Vision), permitindo respostas como _"nessa etapa, clique no botão Salvar"_.
+- **Camada de IA agnóstica de provider:** um único client compatível com OpenAI; troca entre **Gemini** (padrão, free tier), OpenAI ou Ollama apenas por variável de ambiente.
+- **Multi-tenant com governança:** organizações isoladas, papéis (`owner`/`admin`/`member`), permissão granular de dashboard, **histórico de auditoria** e **Row Level Security** no banco como defesa em profundidade.
+- **Inteligência operacional:** métricas de adoção e **identificação automática de lacunas** (o que perguntaram e o bot não soube responder).
+- **Acessibilidade de verdade:** WCAG 2.2/ARIA, Text-to-Speech, Speech-to-Text, **VLibras**, alto contraste, navegação por teclado e auditoria com axe-core.
+- **Pronto para produção:** deploy contínuo (Render + Vercel), CORS configurável, limites de upload, modo claro/escuro.
+
+---
 
 ## Funcionalidades
 
-### Documentos e indexação
-- Upload de documentos `.md`, `.txt` e `.pdf`
-- Extração de texto de PDFs
-- Extração de imagens de PDFs e salvamento no Supabase Storage
-- Separação de documentos em chunks com embeddings
-- Listagem e exclusão de documentos
-- Bloqueio de documentos duplicados por título
-- Busca mock por texto para desenvolvimento sem gastar a cota da IA
-
 ### IA Vision e RAG multimodal
-- Geração de descrição real das imagens via IA Vision (Google Gemini)
-- Persistência da descrição, status (`completed` / `mock`) e provider no banco
-- Criação de *chunks visuais* a partir das descrições, vinculados à imagem de origem (`chunks.image_id`)
-- Chat que combina **texto do documento + descrições das imagens**, permitindo respostas como
-  *"na imagem dessa etapa, clique no botão Salvar"*
-- Exibição das fontes usadas na resposta, com badge indicando fontes visuais
-- Exibição das imagens relacionadas, com descrição, status e provider
+- Descrição real das imagens via IA Vision (Google Gemini)
+- *Chunks visuais* a partir das descrições, vinculados à imagem de origem
+- Chat que combina texto + telas, citando as fontes usadas
+- Visualizador de imagens embutido (lightbox), descrição e status por imagem
 
 ### Multiusuário e organizações
-- Cadastro e login via Supabase Auth (e-mail + senha)
-- Criação de organização (vira **owner**) ou entrada via **código de convite** (vira **member**)
-- Controle de permissões por papel: `owner` > `admin` > `member`
-- Isolamento total de dados por organização
-- Painel de gestão de equipe: código de convite, troca de papéis e remoção de membros
-- Refresh automático de token no frontend
-- **Acesso granular ao dashboard**: membros solicitam acesso pelo próprio site; owner/admin
-  recebem a solicitação num banner e aprovam/recusam. A aprovação concede apenas a visão do
-  dashboard, sem promover o membro a admin
+- Cadastro/login (Supabase Auth); criação de org (owner) ou entrada por **código de convite** (member)
+- Permissões por papel `owner` > `admin` > `member` e isolamento por organização
+- Gestão de equipe (papéis, remoção) e **acesso granular ao dashboard** com fluxo de solicitação/aprovação
 
 ### Gestão do conhecimento
-- Histórico de conversas persistido por usuário, com sidebar para retomar conversas anteriores
-- Título de conversa gerado automaticamente a partir da primeira pergunta
-- Biblioteca de documentos com busca por título, filtro por tipo e metadados
-  (contagem de chunks, chunks visuais e imagens por documento)
-- Reprocessamento de um documento já indexado (re-gera embeddings dos chunks e
-  re-descreve as imagens via Vision) sem precisar reenviar o arquivo
+- Histórico de conversas com sidebar para retomar
+- Biblioteca de documentos com busca, filtro e metadados (chunks/imagens)
+- Reprocessamento (re-gera embeddings e descrições) sem reenviar o arquivo
 
 ### Inteligência operacional (dashboard)
-- Métricas de uso: perguntas feitas, taxa de resposta, conversas, tamanho da base
-- Gráfico de perguntas nos últimos 7 dias
-- Dashboard de perguntas sem resposta (o que os usuários perguntaram e o bot não soube responder)
-- Identificação de lacunas na base: termos mais frequentes nas perguntas sem resposta
+- Métricas de uso, gráfico de perguntas (7 dias)
+- Perguntas sem resposta e lacunas na base de conhecimento
 
 ### Governança e segurança
-- Histórico de auditoria: registra ações sensíveis (upload, exclusão,
-  reprocessamento, mudança de papel, aprovação de acesso) com autor, alvo e data
-- Painel de auditoria restrito a admin/owner (mais estrito que o dashboard)
-- Validação de upload: limite de tamanho (configurável), bloqueio de arquivo
-  vazio e de conteúdo não-UTF-8
-- Row Level Security (RLS) no banco como defesa em profundidade: cada usuário
-  só acessa os dados da própria organização, mesmo em caso de vazamento de chave
+- Histórico de auditoria das ações sensíveis (painel admin/owner)
+- Validação de upload (tamanho, vazio, UTF-8)
+- Row Level Security por organização no Postgres
 
 ### Acessibilidade (WCAG 2.2 / ARIA)
-- Descrições das imagens usadas como `alt text` e legendas acessíveis
-- Text-to-Speech: botão "Ouvir resposta" no chat
-- Speech-to-Text: perguntas por comando de voz
-- Integração com VLibras (Língua Brasileira de Sinais)
-- Navegação completa por teclado, *skip links* e foco visível
-- Alto contraste e ajuste de tamanho de fonte (persistidos)
-- Componentes compatíveis com leitores de tela (semântica ARIA, *live regions*)
-- Auditoria de acessibilidade com axe-core em modo desenvolvimento
+- `alt text` com a descrição da IA, TTS, STT, VLibras, alto contraste, escala de fonte
+- Navegação por teclado, *skip links*, *live regions* e auditoria axe-core
+
+---
 
 ## Stack
 
-### Backend
-- Python
-- FastAPI
-- Supabase (Auth + Postgres + Storage)
-- pgvector
-- SDK compatível com OpenAI (provider configurável: **Google Gemini** por padrão, OpenAI ou Ollama)
-- Uvicorn
-- pypdf
-- PyMuPDF
-- Pillow
-- email-validator
+**Backend:** Python · FastAPI · Supabase (Auth + Postgres + Storage) · pgvector · SDK compatível com OpenAI (Gemini por padrão) · PyMuPDF · Pillow · pypdf
 
-### Frontend
-- React
-- Vite
-- Tailwind CSS
-- @axe-core/react
+**Frontend:** React · Vite · Tailwind CSS · @axe-core/react
 
-### Banco de dados
-- Supabase Postgres
-- Supabase Storage
-- pgvector
+**Infra:** Render (API) · Vercel (web) · UptimeRobot (keep-alive)
 
-Tabelas principais:
+### Tabelas principais
+`organizations` · `profiles` · `organization_members` · `dashboard_access_requests` · `documents` · `document_versions` · `chunks` (com `image_id`) · `document_images` · `conversations` · `messages` (com `answered`) · `audit_logs` · `feedback`
 
-- `organizations` (com `invite_code`)
-- `profiles`
-- `organization_members` (papel: owner / admin / member; flag `dashboard_access`)
-- `dashboard_access_requests` (solicitações de acesso ao dashboard)
-- `documents`
-- `document_versions`
-- `chunks` (com `image_id` para chunks visuais)
-- `document_images` (com descrição, status e provider)
-- `conversations`
-- `messages` (com flag `answered` para métricas)
-- `feedback`
+---
 
-## Configuração
+## Rodando localmente
 
 ### Backend
 
-1. Crie o `backend/.env` a partir do `backend/.env.example`:
+1. Crie `backend/.env` a partir de `backend/.env.example`:
 
 ```env
 SUPABASE_URL=
 SUPABASE_KEY=
-SUPABASE_SERVICE_KEY=        # opcional; usado para operações administrativas
 
 # Provider de IA (compatível com OpenAI). Padrão: Google Gemini (free tier).
-# Crie a chave gratuita em https://aistudio.google.com/apikey
+# Chave gratuita em https://aistudio.google.com/apikey
 AI_API_KEY=
 AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
 CHAT_MODEL=gemini-2.5-flash-lite
@@ -144,38 +139,28 @@ VISION_MODEL=gemini-2.5-flash-lite
 EMBEDDING_MODEL=gemini-embedding-001
 EMBEDDING_DIM=768
 
-ENVIRONMENT=development
-DEFAULT_ORGANIZATION_ID=      # fallback/seed; o org_id real vem do usuário
-USE_MOCK_AI=true              # true = não chama a IA (mock, sem gastar cota)
-MAX_UPLOAD_MB=10             # limite de tamanho de upload
+USE_MOCK_AI=false     # true = não chama a IA (mock, sem gastar cota)
+MAX_UPLOAD_MB=10
 ```
 
-> **Providers alternativos:** para **OpenAI**, use `AI_BASE_URL=https://api.openai.com/v1`,
-> modelos `gpt-4o-mini` / `text-embedding-3-small` e `EMBEDDING_DIM=1536`. Para **Ollama** local,
-> use `AI_BASE_URL=http://localhost:11434/v1` e modelos locais. A dimensão dos embeddings precisa
-> bater com a do banco (ver migração).
+> **Outros providers:** OpenAI → `AI_BASE_URL=https://api.openai.com/v1`, modelos `gpt-4o-mini` / `text-embedding-3-small`, `EMBEDDING_DIM=1536`. Ollama → `AI_BASE_URL=http://localhost:11434/v1`. A dimensão precisa bater com a do banco.
 
-2. No painel do Supabase, em **Authentication > Providers**, habilite **Email** e
-   **desligue "Confirm email"** em desenvolvimento (evita rate limit de e-mail e
-   permite login imediato após o cadastro).
+2. No Supabase → **Authentication > Providers**: habilite **Email** e **desligue "Confirm email"** em dev.
 
-3. Rode as migrações SQL (em `backend/scripts/`) no **SQL Editor** do Supabase, na ordem:
+3. Rode as migrações (em `backend/scripts/`) no **SQL Editor**, nesta ordem — escolha **"Run without RLS"** em todas, **exceto** a última (`migration_rls.sql`), em que o RLS é ativado de propósito:
    - `migration_add_image_id_to_chunks.sql`
    - `migration_multiuser.sql`
    - `migration_analytics.sql`
    - `migration_dashboard_access.sql`
-   - `migration_gemini_embeddings.sql` (ajusta a dimensão dos embeddings para 768;
-     se já tinha documentos indexados, use o botão **Reprocessar** depois para re-gerar)
-   - `migration_audit.sql` (histórico de auditoria)
-   - `migration_rls.sql` (Row Level Security — pode escolher "Run and enable RLS")
-
-   Ao avisar sobre RLS, escolha **Run without RLS** (a autorização é feita na camada
-   da aplicação).
+   - `migration_gemini_embeddings.sql` _(define embeddings em 768 dimensões)_
+   - `migration_audit.sql`
+   - `migration_rls.sql` _(Row Level Security)_
 
 4. Suba a API:
 
 ```bash
 cd backend
+pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
@@ -184,89 +169,19 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```bash
 cd frontend
 npm install
+# opcional: crie frontend/.env com VITE_API_BASE=http://127.0.0.1:8000
 npm run dev
 ```
 
-## Estrutura do projeto
+---
 
-```txt
-scribemind_ai/
-├── backend/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── access_requests.py
-│   │   │   ├── analytics.py
-│   │   │   ├── audit.py
-│   │   │   ├── auth.py
-│   │   │   ├── chat.py
-│   │   │   ├── conversations.py
-│   │   │   ├── documents.py
-│   │   │   ├── health.py
-│   │   │   └── members.py
-│   │   ├── core/
-│   │   │   └── config.py
-│   │   ├── db/
-│   │   │   └── supabase_client.py
-│   │   ├── services/
-│   │   │   ├── ai_client.py
-│   │   │   ├── analytics_service.py
-│   │   │   ├── audit_service.py
-│   │   │   ├── auth_service.py
-│   │   │   ├── conversation_service.py
-│   │   │   ├── document_image_service.py
-│   │   │   ├── document_ingestion_service.py
-│   │   │   ├── embedding_service.py
-│   │   │   ├── image_description_service.py
-│   │   │   ├── pdf_image_service.py
-│   │   │   ├── pdf_service.py
-│   │   │   ├── rag_service.py
-│   │   │   └── reprocess_service.py
-│   │   └── main.py
-│   ├── documents/
-│   ├── scripts/
-│   │   ├── ingest_markdown.py
-│   │   ├── migration_add_image_id_to_chunks.sql
-│   │   ├── migration_multiuser.sql
-│   │   ├── migration_analytics.sql
-│   │   ├── migration_dashboard_access.sql
-│   │   └── migration_gemini_embeddings.sql
-│   ├── .env.example
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── auth/
-│   │   │   │   └── AuthScreen.jsx
-│   │   │   ├── AccessibilityBar.jsx
-│   │   │   ├── AccessRequestButton.jsx
-│   │   │   ├── AuditLog.jsx
-│   │   │   ├── ChatPanel.jsx
-│   │   │   ├── ConversationSidebar.jsx
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── DashboardRequestsBanner.jsx
-│   │   │   ├── DocumentList.jsx
-│   │   │   ├── DocumentUpload.jsx
-│   │   │   ├── ImageGallery.jsx
-│   │   │   ├── Lightbox.jsx
-│   │   │   ├── Logo.jsx
-│   │   │   ├── MembersPanel.jsx
-│   │   │   └── VLibras.jsx
-│   │   ├── context/
-│   │   │   ├── AccessibilityContext.jsx
-│   │   │   └── AuthContext.jsx
-│   │   ├── hooks/
-│   │   │   ├── useSpeechRecognition.js
-│   │   │   └── useSpeechSynthesis.js
-│   │   ├── lib/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   ├── index.css
-│   │   └── main.jsx
-│   ├── package.json
-│   └── vite.config.js
-├── .gitignore
-└── README.md
-```
+## Deploy
+
+- **Backend (Render):** blueprint em [`render.yaml`](render.yaml). Defina no painel os segredos `SUPABASE_URL`, `SUPABASE_KEY`, `AI_API_KEY` e `CORS_ORIGINS`.
+- **Frontend (Vercel):** Root Directory = `frontend`, variável `VITE_API_BASE` apontando para a URL do Render.
+- **Keep-alive:** um monitor no UptimeRobot pingando `/health/` evita a hibernação do plano gratuito do Render.
+
+---
 
 ## API
 
@@ -275,26 +190,42 @@ scribemind_ai/
 | POST | `/auth/register` | público | Cadastro + criação/entrada em organização |
 | POST | `/auth/login` | público | Login (retorna tokens) |
 | POST | `/auth/refresh` | público | Renova o access token |
-| GET | `/auth/me` | autenticado | Dados do usuário, papel, organização e acesso ao dashboard |
+| GET | `/auth/me` | autenticado | Dados do usuário, papel, org e acesso ao dashboard |
 | GET | `/members/` | autenticado | Lista membros da organização |
-| PATCH | `/members/{id}` | admin/owner | Altera papel de um membro |
-| DELETE | `/members/{id}` | admin/owner | Remove um membro |
+| PATCH / DELETE | `/members/{id}` | admin/owner | Altera papel / remove membro |
 | POST | `/chat/` | membro | Pergunta ao RAG multimodal (cria/usa conversa) |
-| GET | `/conversations/` | autenticado | Lista as conversas do usuário |
-| GET | `/conversations/{id}` | autenticado | Mensagens de uma conversa |
-| PATCH | `/conversations/{id}` | autenticado | Renomeia uma conversa |
-| DELETE | `/conversations/{id}` | autenticado | Exclui uma conversa |
-| GET | `/documents/` | membro | Lista documentos da organização (com metadados) |
+| GET / DELETE / PATCH | `/conversations/...` | autenticado | Histórico de conversas |
+| GET | `/documents/` | membro | Lista documentos (com metadados) |
 | POST | `/documents/upload` | membro | Indexa um documento |
 | POST | `/documents/{id}/reprocess` | admin/owner | Reprocessa embeddings e descrições |
 | DELETE | `/documents/{id}` | admin/owner | Exclui um documento |
-| GET | `/documents/{id}/images` | membro | Lista imagens de um documento |
-| GET | `/analytics/metrics` | dashboard | Métricas de uso |
-| GET | `/analytics/unanswered` | dashboard | Perguntas sem resposta |
-| GET | `/analytics/gaps` | dashboard | Lacunas na base de conhecimento |
-| GET | `/audit/` | admin/owner | Histórico de auditoria da organização |
-| GET | `/access-requests/mine` | autenticado | Status do próprio pedido de acesso |
-| POST | `/access-requests/` | membro | Solicita acesso ao dashboard |
-| GET | `/access-requests/` | admin/owner | Lista pedidos pendentes |
-| POST | `/access-requests/{id}/approve` | admin/owner | Aprova um pedido |
-| POST | `/access-requests/{id}/deny` | admin/owner | Recusa um pedido |
+| GET | `/documents/{id}/images` | membro | Imagens de um documento |
+| GET | `/analytics/metrics` `/unanswered` `/gaps` | dashboard | Métricas, perguntas sem resposta e lacunas |
+| GET | `/audit/` | admin/owner | Histórico de auditoria |
+| POST/GET | `/access-requests/...` | membro / admin | Solicitação e aprovação de acesso ao dashboard |
+
+---
+
+## Estrutura do projeto
+
+```txt
+scribemind_ai/
+├── backend/
+│   ├── app/
+│   │   ├── api/          # rotas (auth, chat, documents, analytics, audit, members…)
+│   │   ├── core/         # config
+│   │   ├── db/           # client Supabase
+│   │   ├── services/     # rag, ai_client, embeddings, vision, ingestão, auditoria…
+│   │   └── main.py
+│   ├── scripts/          # migrações SQL
+│   ├── .env.example
+│   └── requirements.txt
+├── frontend/
+│   └── src/
+│       ├── components/   # Chat, Dashboard, AuditLog, Logo, Lightbox, acessibilidade…
+│       ├── context/      # Auth e Accessibility
+│       ├── hooks/        # speech synthesis / recognition
+│       └── lib/          # camada de API
+├── render.yaml           # blueprint de deploy do backend
+└── README.md
+```
