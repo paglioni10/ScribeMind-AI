@@ -1,0 +1,22 @@
+name: Keep Supabase alive
+
+# Mantém o projeto Supabase ativo: o free tier pausa após ~7 dias sem
+# atividade no banco. Este job consulta o banco a cada 2 dias (via endpoint
+# /health/db do backend), com folga confortável dentro do limite.
+
+on:
+  schedule:
+    - cron: "0 6 */2 * *" # a cada 2 dias, às 06:00 UTC
+  workflow_dispatch: {} # permite disparar manualmente pela aba Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta o banco via backend (impede o Supabase de pausar)
+        run: |
+          echo "Pingando /health/db ..."
+          curl -fsS --retry 3 --retry-all-errors --max-time 180 \
+            https://scribemind-api.onrender.com/health/db
+          echo ""
+          echo "OK — banco consultado."
