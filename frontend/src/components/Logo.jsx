@@ -20,7 +20,7 @@ export function Logo({ theme: themeProp, className = "", title = true }) {
 
   return (
     <svg
-      viewBox="0 0 196 36"
+      viewBox="0 0 158 36"
       className={className}
       role="img"
       aria-label="ScribeMind AI"
